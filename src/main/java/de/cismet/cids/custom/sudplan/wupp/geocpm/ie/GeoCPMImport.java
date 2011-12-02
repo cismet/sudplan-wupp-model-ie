@@ -180,6 +180,12 @@ public class GeoCPMImport {
                     section = SECTION_TRIANGLES;
                 } else if (line.startsWith(SECTION_CURVES)) {
                     LOG.info("processing section: " + SECTION_CURVES);
+
+                    // insert points before post-processing triangles
+                    this.insertBatch(batchSQL, con);
+                    batchSQL = new StringBuilder();
+                    this.postProcessTriangles(configId, con);
+
                     section = SECTION_CURVES;
                 } else if (line.startsWith(SECTION_SOURCE_DRAIN)) {
                     LOG.info("processing section: " + SECTION_SOURCE_DRAIN);
@@ -287,8 +293,8 @@ public class GeoCPMImport {
      *
      * @throws  SQLException  DOCUMENT ME!
      */
-    private void postProcess(final int configId, final Connection con) throws SQLException {
-        LOG.info("postProcessing data for new configuration: " + configId); // NOI18N
+    private void postProcessTriangles(final int configId, final Connection con) throws SQLException {
+        LOG.info("postProcessing triangle data for new configuration: " + configId); // NOI18N
 
         final String triangleUpdate = "UPDATE geocpm_triangle gt "                                                       // NOI18N
                     + "SET geocpm_point_a_id = gpA.id, geocpm_point_b_id = gpB.id, geocpm_point_c_id = gpC.id, "         // NOI18N
@@ -299,6 +305,29 @@ public class GeoCPMImport {
                     + "AND gpB.index = gt.tmp_point_b_id AND gpB.geocpm_configuration_id = gt.geocpm_configuration_id "  // NOI18N
                     + "AND gpC.index = gt.tmp_point_c_id AND gpC.geocpm_configuration_id = gt.geocpm_configuration_id;"; // NOI18N
 
+        final Statement stmt = con.createStatement();
+        try {
+            stmt.executeUpdate(triangleUpdate);
+        } catch (final SQLException e) {
+            LOG.error("cannot post process data of config " + configId, e); // NOI18N
+
+            throw e;
+        } finally {
+            stmt.close();
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   configId  DOCUMENT ME!
+     * @param   con       DOCUMENT ME!
+     *
+     * @throws  SQLException  DOCUMENT ME!
+     */
+    private void postProcess(final int configId, final Connection con) throws SQLException {
+        LOG.info("postProcessing data for new configuration: " + configId); // NOI18N
+
         final PreparedStatement overviewGeomInsertStmt = con.prepareStatement(
                 "INSERT INTO geom (geo_field) VALUES ("                                                  // NOI18N
                         + "(SELECT ST_Union(geom) FROM geocpm_triangle WHERE geocpm_configuration_id = " // NOI18N
@@ -307,8 +336,6 @@ public class GeoCPMImport {
                 Statement.RETURN_GENERATED_KEYS);
         final Statement stmt = con.createStatement();
         try {
-            stmt.executeUpdate(triangleUpdate);
-
             overviewGeomInsertStmt.executeUpdate();
 
             final ResultSet s = overviewGeomInsertStmt.getGeneratedKeys();
@@ -458,7 +485,7 @@ public class GeoCPMImport {
         try {
             stmt.execute(batchSQL.toString());
         } catch (final SQLException e) {
-            LOG.warn("cannot insert data", e); // NOI18N
+            LOG.warn("cannot insert data for query:\n" + batchSQL.toString(), e); // NOI18N
 
             final BufferedWriter bw = new BufferedWriter(new FileWriter("out.sql"));
             bw.write(batchSQL.toString(), 0, batchSQL.length());

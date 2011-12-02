@@ -107,15 +107,15 @@ CREATE TABLE geocpm_breaking_edge (
 CREATE SEQUENCE geocpm_breaking_edge_seq MINVALUE 1 START 1;
 ALTER TABLE geocpm_breaking_edge ALTER COLUMN id SET DEFAULT nextval('geocpm_breaking_edge_seq');
 
-CREATE SEQUENCE geocpm_breaking_edge_proxy_seq MINVALUE 1 START 1;
--- Creates the new table "geocpm_breaking_edge_proxy" with the columns "height NUMERIC NULL, geocpm_configuration_proxy INTEGER NULL, id INTEGER PRIMARY KEY DEFAULT nextval('geocpm_breaking_edge_proxy_seq')".
-CREATE TABLE geocpm_breaking_edge_proxy(
-    id INTEGER PRIMARY KEY DEFAULT nextval('geocpm_breaking_edge_proxy_seq'),
-    geocpm_configuration_proxy INTEGER, 
-    height NUMERIC(14,2),
-
-    FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration
-);
+--CREATE SEQUENCE geocpm_breaking_edge_proxy_seq MINVALUE 1 START 1;
+---- Creates the new table "geocpm_breaking_edge_proxy" with the columns "height NUMERIC NULL, geocpm_configuration_proxy INTEGER NULL, id INTEGER PRIMARY KEY DEFAULT nextval('geocpm_breaking_edge_proxy_seq')".
+--CREATE TABLE geocpm_breaking_edge_proxy(
+--    id INTEGER PRIMARY KEY DEFAULT nextval('geocpm_breaking_edge_proxy_seq'),
+--    geocpm_configuration_proxy INTEGER, 
+--    height NUMERIC(14,2),
+--
+--    FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration
+--);
 
 
 CREATE TABLE geocpm_jt_breaking_edge_triangle (

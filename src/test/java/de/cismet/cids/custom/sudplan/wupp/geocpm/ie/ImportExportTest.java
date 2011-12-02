@@ -87,6 +87,7 @@ public class ImportExportTest
             STMT.executeUpdate("drop view geosuche;"); // removed as geometry column modification wouldn't be possible otherwise
             STMT.execute("SELECT DropGeometryColumn('public','geom','geo_field');");
             STMT.execute("SELECT AddGeometryColumn( 'public','geom','geo_field', 31466, 'GEOMETRY', 3 );");
+            
         }
         catch(final SQLException e)
         {
@@ -94,11 +95,13 @@ public class ImportExportTest
             e.getNextException().printStackTrace();
             throw e;
         }
-
+        
         final ScriptRunner runner = new ScriptRunner(CON, true, true);
         runner.runScript(new BufferedReader(
                                  new InputStreamReader(                       
                                      ImportExportTest.class.getResourceAsStream("../geocpm_db_v2.sql"))));
+        
+        System.out.println("");
     }
 
     @AfterClass
@@ -127,11 +130,20 @@ public class ImportExportTest
     
     private int getNewestConfigId() throws Exception
     {
-        final ResultSet result = STMT.executeQuery("select max(id) from geocpm_configuration");
-        assertTrue(result.next());
-        final int newConfigId = result.getInt(1);
-        result.close();
-        return newConfigId;
+        ResultSet result = null;
+        try
+        {
+            result = STMT.executeQuery("select max(id) from geocpm_configuration");
+            assertTrue(result.next());
+            final int newConfigId = result.getInt(1);
+            result.close();
+            return newConfigId;  
+        }
+        finally
+        {
+           result.close();
+        }
+
     }
     
     
