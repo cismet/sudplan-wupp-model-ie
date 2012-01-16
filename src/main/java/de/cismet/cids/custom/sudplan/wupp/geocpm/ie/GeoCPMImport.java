@@ -132,18 +132,20 @@ public class GeoCPMImport {
                 "cismetz12",
                 "jdbc:postgresql://192.168.100.12/wp6_db");
 
-        importer.beginImport();
+        importer.doImport();
     }
 
     /**
      * DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
      *
      * @throws  SQLException           DOCUMENT ME!
      * @throws  IOException            DOCUMENT ME!
      * @throws  ParseException         DOCUMENT ME!
      * @throws  IllegalStateException  DOCUMENT ME!
      */
-    public void beginImport() throws SQLException, IOException, ParseException {
+    public int doImport() throws SQLException, IOException, ParseException {
         LOG.info("BEGIN IMPORT");
         final long startTime = System.currentTimeMillis();
 
@@ -253,6 +255,8 @@ public class GeoCPMImport {
         sdf.setTimeZone(TimeZone.getTimeZone("GMT+0"));
         LOG.info("DONE SUCCESSFUL in "
                     + sdf.format(new Date((endTime - startTime) - sdf.getTimeZone().getRawOffset())));
+
+        return configId;
     }
 
     /**

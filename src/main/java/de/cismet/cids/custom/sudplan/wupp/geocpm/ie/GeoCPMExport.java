@@ -669,7 +669,7 @@ public class GeoCPMExport {
      * @throws  IOException     DOCUMENT ME!
      * @throws  ParseException  DOCUMENT ME!
      */
-    public void beginExport() throws SQLException, IOException, ParseException {
+    public void doExport() throws SQLException, IOException, ParseException {
         LOG.info("BEGIN EXPORT");
 
         Connection con = null;
@@ -731,6 +731,6 @@ public class GeoCPMExport {
                 "cismetz12",
                 "jdbc:postgresql://192.168.100.12/wp6_db");
 
-        exporter.beginExport();
+        exporter.doExport();
     }
 }

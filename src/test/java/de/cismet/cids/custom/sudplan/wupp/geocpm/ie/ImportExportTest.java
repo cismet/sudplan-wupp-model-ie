@@ -153,10 +153,10 @@ public class ImportExportTest
         final String dbURL =  CON.getMetaData().getURL();
        
         this.importer = new GeoCPMImport(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE), DB_USER, DB_PWD, dbURL);
-        this.importer.beginImport();
+        this.importer.doImport();
         
         this.exporter = new GeoCPMExport(this.getNewestConfigId(), this.testOutFile, DB_USER, DB_PWD, dbURL);
-        this.exporter.beginExport();
+        this.exporter.doExport();
     
       
         final List<String> inData  = IOUtils.readLines(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE));
