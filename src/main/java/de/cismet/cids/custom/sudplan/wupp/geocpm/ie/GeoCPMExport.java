@@ -609,7 +609,8 @@ public class GeoCPMExport {
                     "select id, index, type, height, triangle_count_high, triangle_count_low"
                             + " from geocpm_breaking_edge"
                             + " where geocpm_configuration_id = "
-                            + this.configId);
+                            + this.configId
+                            + " order by id");
 
             StringBuilder tmpContent;
 
@@ -625,7 +626,7 @@ public class GeoCPMExport {
                 tmpContent.append(result.getInt(3)).append(FIELD_SEP);                 // type
                 tmpContent.append(DCF2.format(result.getDouble(4))).append(FIELD_SEP); // height
                 tmpContent.append(result.getInt(5)).append(FIELD_SEP);                 // triangle_count_high
-                tmpContent.append(result.getInt(5));                                   // triangle_count_low
+                tmpContent.append(result.getInt(6));                                   // triangle_count_low
 
                 halfRecs.add(tmpContent);
             }
@@ -653,6 +654,8 @@ public class GeoCPMExport {
 
             this.prepContent.append(SECTION_BK_CONNECT).append(' ').append(numBKs).append(EOL);
             this.prepContent.append(tmpFinalContent);
+        } catch (final Exception e) {
+            LOG.error("An error occurred while processing BREAKING EADGES information", e);
         } finally {
             if (result != null) {
                 result.close();
@@ -687,6 +690,8 @@ public class GeoCPMExport {
             this.retrieveManholes(stmt);
             this.retrieveMarked(stmt);
             // this.retrieveRainCurves(stmt);
+            // RAINCURVE is not handled in the exporter
+            this.prepContent.append(SECTION_RAINCURVE).append(" 0").append(EOL).append(EOL);
             this.retrieveBKs(stmt);
 
             final FileOutputStream fout = new FileOutputStream(this.outFile);

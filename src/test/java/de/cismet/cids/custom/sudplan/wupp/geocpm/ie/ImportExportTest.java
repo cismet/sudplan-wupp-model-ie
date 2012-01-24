@@ -23,11 +23,13 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.sql.Connection;
 import de.cismet.tools.ScriptRunner;
+import java.io.BufferedInputStream;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Properties;
+import java.util.zip.GZIPInputStream;
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -49,7 +51,8 @@ public class ImportExportTest
     private static Connection CON;
     private static Statement  STMT;
 
-    private static final String TEST_INPUT_FILE  = "GeoCPM_test.ein";
+    private static final String TEST_INPUT_FILE  = "GeoCPM_test.ein.gz";
+//    private static final String TEST_INPUT_FILE  = "GeoCPM_test.ein";
     private static final String TEST_OUTPUT_FILE = "GeoCPM_test_out.ein";
     
     private static final String DB_USER   = "postgres";
@@ -86,7 +89,7 @@ public class ImportExportTest
         {
             STMT.executeUpdate("drop view geosuche;"); // removed as geometry column modification wouldn't be possible otherwise
             STMT.execute("SELECT DropGeometryColumn('public','geom','geo_field');");
-            STMT.execute("SELECT AddGeometryColumn( 'public','geom','geo_field', 31466, 'GEOMETRY', 3 );");
+            STMT.execute("SELECT AddGeometryColumn( 'public','geom','geo_field', -1, 'GEOMETRY', 2 );");
             
         }
         catch(final SQLException e)
@@ -101,7 +104,6 @@ public class ImportExportTest
                                  new InputStreamReader(                       
                                      ImportExportTest.class.getResourceAsStream("../geocpm_db_v2.sql"))));
         
-        System.out.println("");
     }
 
     @AfterClass
@@ -152,21 +154,27 @@ public class ImportExportTest
     {
         final String dbURL =  CON.getMetaData().getURL();
        
-        this.importer = new GeoCPMImport(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE), DB_USER, DB_PWD, dbURL);
+        this.importer = new GeoCPMImport(new BufferedInputStream(new GZIPInputStream(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE))), DB_USER, DB_PWD, dbURL);
+
+//        this.importer = new GeoCPMImport(new FileInputStream("/home/bfriedrich/Desktop/geocpm/geo_dyna/GeoCPM_test.ein"), DB_USER, DB_PWD, dbURL);
         this.importer.doImport();
         
         this.exporter = new GeoCPMExport(this.getNewestConfigId(), this.testOutFile, DB_USER, DB_PWD, dbURL);
         this.exporter.doExport();
     
       
-        final List<String> inData  = IOUtils.readLines(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE));
+        final List<String> inData  = IOUtils.readLines(new BufferedInputStream(new GZIPInputStream(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE))));
+        
+//        final List<String> inData  = IOUtils.readLines(new FileInputStream("/home/bfriedrich/Desktop/geocpm/geo_dyna/GeoCPM_test.ein"));
         final List<String> outData = IOUtils.readLines(new FileInputStream(this.testOutFile));
     
-        assertEquals(inData.size(), outData.size());
+        assertEquals("Number of import and export data is different", inData.size(), outData.size());
         
         final int size = inData.size();
         for(int i = 0; i < size; i++)
         {
+            // Sometimes, there is a field delimiter at the end of a record in in the INPUT file.
+            // For now, we gnore it in our tests
             assertEquals(inData.get(i).trim(), outData.get(i).trim());
         }
     }

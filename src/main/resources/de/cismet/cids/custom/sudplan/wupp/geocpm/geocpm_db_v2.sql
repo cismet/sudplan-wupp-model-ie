@@ -183,6 +183,21 @@ CREATE TABLE geocpm_jt_manhole_triangle (
 );
 
 
+
+------------
+
+CREATE TABLE tmp_bk_triangle_table 
+(
+--   id BIGSERIAL PRIMARY KEY,
+   configuration_id BIGINT, 
+   triangle_index BIGINT, 
+   breaking_edge_index BIGINT, 
+   orientation char(1)
+);
+
+
+CREATE INDEX geocpm_triangle_index_idx ON geocpm_triangle  (index);
+
 --select ST_GeomFromEWKT('SRID=31466;POINT(2575894.570 5679685.710 159.280)')
 
 --select ST_AsEWKT('01010000A0EA7A00008FC2F5480BA74341D7A3706D91AA5541295C8FC2F5E86340')
