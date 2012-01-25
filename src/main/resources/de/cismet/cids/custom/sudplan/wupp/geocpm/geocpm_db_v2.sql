@@ -71,11 +71,11 @@ CREATE TABLE geocpm_triangle (
     neighbour_a_id INTEGER,
     neighbour_b_id INTEGER,
     neighbour_c_id INTEGER,
-    roughness NUMERIC(15, 3),
-    loss NUMERIC(15, 3),
-    be_height_a NUMERIC(15, 3),
-    be_height_b NUMERIC(15, 3),
-    be_height_c NUMERIC(15, 3),
+    roughness NUMERIC(18, 3),
+    loss NUMERIC(18, 3),
+    be_height_a NUMERIC(18, 3),
+    be_height_b NUMERIC(18, 3),
+    be_height_c NUMERIC(18, 3),
     marked BOOLEAN,
 
     FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration,
@@ -140,8 +140,8 @@ CREATE TABLE geocpm_curve (
 CREATE TABLE geocpm_curve_value (
     id BIGSERIAL PRIMARY KEY,
     geocpm_curve_id BIGINT,
-    t NUMERIC(15, 3),
-    value NUMERIC(15, 3),
+    t NUMERIC(18, 3),
+    value NUMERIC(18, 3),
 
     FOREIGN KEY (geocpm_curve_id) REFERENCES geocpm_curve
 );
@@ -151,7 +151,7 @@ CREATE TABLE geocpm_source_drain (
     geocpm_configuration_id INTEGER,
     identifier VARCHAR(200),
     geocpm_triangle_id BIGINT,
-    max_capacity NUMERIC(15, 3),
+    max_capacity NUMERIC(18, 3),
     geocpm_curve_id BIGINT,
 
     FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration,
@@ -163,11 +163,19 @@ CREATE TABLE geocpm_manhole (
     id BIGSERIAL PRIMARY KEY,
     geocpm_configuration_id INTEGER,
     internal_id INTEGER,
-    cap_height NUMERIC(14, 2),
-    entry_profile NUMERIC(14, 2),
-    loss_overfall NUMERIC(14, 2),
-    loss_emersion NUMERIC(14, 2),
-    length_emersion NUMERIC(14, 2),
+--    cap_height NUMERIC(14, 2),
+--    entry_profile NUMERIC(14, 2),
+--    loss_overfall NUMERIC(14, 2),
+--    loss_emersion NUMERIC(14, 2),
+--    length_emersion NUMERIC(14, 2),
+
+    cap_height NUMERIC(17, 2),
+    entry_profile NUMERIC(17, 2),
+    loss_overfall NUMERIC(17, 2),
+    loss_emersion NUMERIC(17, 2),
+    length_emersion NUMERIC(17, 2),
+
+
     name VARCHAR(200),
 
     FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration

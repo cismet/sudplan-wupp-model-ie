@@ -15,6 +15,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import java.math.BigDecimal;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -33,11 +35,21 @@ import java.util.Locale;
 import java.util.Properties;
 
 /**
- * This is a rather dirty implementation of a GeoCPM.ein file parser.
+ * GeoCPMExport exports GeoCPM data which was imported by {@link GeoCPMImport} before to a format which is compliant to
+ * the GeoCPM interface description v0.5 (5th October 2011).
  *
- * @version  $Revision$, $Date$
+ * <p>NOTE: GeoCPMExport already implements the handling of NULL values which will be defined in the next GeoCPM
+ * standard namely that NULL values are represented by <NULL_TOKEN_FILE>. However, we only consider values for this
+ * handling which are not of type boolean. The reason is that the current implementation of the GeoCPMExport relies on
+ * these primitive boolean types and it is very unlikely (at least, at this moment) that those values might become NULL.
+ * To see the current handling of NULL values, consider the handleValue(...) methods.</p>
+ *
+ * <p>RAINCURVES are not exported by GeoCPMExport. This data will be put in the resulting export output file by another
+ * tool. That's why GeoCPMExport just output "RAINCURVE 0\n\n".</p>
+ *
+ * @author   Benjamin Friedrich (benjamin.friedrich@cismet.de)
+ * @version  1.0 01/2012
  */
-// TODO: test with GeoCPMExport
 public class GeoCPMExport {
 
     //~ Static fields/initializers ---------------------------------------------
@@ -74,6 +86,8 @@ public class GeoCPMExport {
     public static final char EOL = '\n';
     public static final String COL = ": ";
 
+    public static final String NULL_TOKEN_FILE = "-1.#R";
+
     private static final DecimalFormatSymbols DCFS = DecimalFormatSymbols.getInstance(Locale.ENGLISH);
     private static final DecimalFormat DCF2 = new DecimalFormat("#0.00", DCFS);
     private static final DecimalFormat DCF3 = new DecimalFormat("#0.000", DCFS);
@@ -83,7 +97,6 @@ public class GeoCPMExport {
 
     private final transient DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss"); // NOI18N
 
-//    private final transient BufferedReader reader;
     private final transient File outFile;
     private final transient int configId;
 
@@ -140,6 +153,40 @@ public class GeoCPMExport {
     /**
      * DOCUMENT ME!
      *
+     * @param   dcf    format DOCUMENT ME!
+     * @param   value  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
+    private String handleValue(final DecimalFormat dcf, final BigDecimal value) {
+        return (value == null) ? NULL_TOKEN_FILE : dcf.format(value.doubleValue());
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   value  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
+    private String handleValue(final String value) {
+        return (value == null) ? NULL_TOKEN_FILE : value;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   value  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
+    private String handleValue(final Timestamp value) {
+        return (value == null) ? NULL_TOKEN_FILE : this.dateFormat.format(value);
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
      * @param   stmt  DOCUMENT ME!
      *
      * @throws  SQLException  DOCUMENT ME!
@@ -161,20 +208,20 @@ public class GeoCPMExport {
             final boolean lastValues = result.getBoolean("last_values");
             final boolean saveMarked = result.getBoolean("save_marked");
             final boolean mergeTriangles = result.getBoolean("merge_triangles");
-            final double minCalcTriangeSize = result.getDouble("min_calc_triangle_size");
+            final BigDecimal minCalcTriangeSize = result.getBigDecimal("min_calc_triangle_size");
             final boolean timeStepRestriction = result.getBoolean("time_step_restriction");
             final boolean saveVelocityCurves = result.getBoolean("save_velocity_curves");
             final boolean saveFlowCurves = result.getBoolean("save_flow_curves");
-            final double resultSaveLimit = result.getDouble("result_save_limit");
-            final int numberOfThreads = result.getInt("number_of_threads");
-            final int qIn = result.getInt("q_in");
-            final int qOut = result.getInt("q_out");
+            final BigDecimal resultSaveLimit = result.getBigDecimal("result_save_limit");
+            final String numberOfThreads = this.handleValue(result.getString("number_of_threads"));
+            final String qIn = this.handleValue(result.getString("q_in"));
+            final String qOut = this.handleValue(result.getString("q_out"));
 
             final char YES = 'y';
             final char NO = 'n';
             this.prepContent.append(SECTION_CONFIG).append(EOL);
-            this.prepContent.append(CALC_BEGIN).append(COL).append(this.dateFormat.format(calcBegin)).append(EOL);
-            this.prepContent.append(CALC_END).append(COL).append(this.dateFormat.format(calcEnd)).append(EOL);
+            this.prepContent.append(CALC_BEGIN).append(COL).append(this.handleValue(calcBegin)).append(EOL);
+            this.prepContent.append(CALC_END).append(COL).append(this.handleValue(calcEnd)).append(EOL);
             this.prepContent.append(EOL);
             this.prepContent.append(WRITE_NODE).append(COL).append(writeNode ? YES : NO).append(EOL);
             this.prepContent.append(WRITE_EDGE).append(COL).append(writeEdge ? YES : NO).append(EOL);
@@ -183,15 +230,18 @@ public class GeoCPMExport {
             this.prepContent.append(MERGE_TRIANGLES).append(COL).append(mergeTriangles ? YES : NO).append(EOL);
             this.prepContent.append(MIN_CALC_TRIANGLE_SIZE)
                     .append(COL)
-                    .append(DCF8.format(minCalcTriangeSize))
-                    .append(EOL);
+                    .append(this.handleValue(DCF8, minCalcTriangeSize)) // DCF8.format(minCalcTriangeSize))
+            .append(EOL);
             this.prepContent.append(TIME_STEP_RESTRICTION)
                     .append(COL)
                     .append(timeStepRestriction ? YES : NO)
                     .append(EOL);
             this.prepContent.append(SAVE_VELOCITY_CURVES).append(COL).append(saveVelocityCurves ? YES : NO).append(EOL);
             this.prepContent.append(SAVE_FLOW_CURVES).append(COL).append(saveFlowCurves ? YES : NO).append(EOL);
-            this.prepContent.append(RESULT_SAVE_LIMIT).append(COL).append(DCF8.format(resultSaveLimit)).append(EOL);
+            this.prepContent.append(RESULT_SAVE_LIMIT)
+                    .append(COL)
+                    .append(this.handleValue(DCF8, resultSaveLimit))
+                    .append(EOL);
             this.prepContent.append(NUMBER_OF_THREADS).append(COL).append(numberOfThreads).append(EOL);
             this.prepContent.append(Q_IN).append(COL).append(qIn).append(EOL);
             this.prepContent.append(Q_OUT).append(COL).append(qOut).append(EOL);
@@ -220,26 +270,26 @@ public class GeoCPMExport {
                             + "FROM geocpm_point where geocpm_configuration_id = " + this.configId
                             + "ORDER BY index");
 
-            double x;
-            double y;
-            double z;
-            int index;
+            BigDecimal x;
+            BigDecimal y;
+            BigDecimal z;
+            String index;
 
             final StringBuilder tmpContent = new StringBuilder(this.prepContent.capacity() / 3);
 
             while (result.next()) {
-                index = result.getInt(1);
-                x = result.getDouble(2);
-                y = result.getDouble(3);
-                z = result.getDouble(4);
+                index = result.getString(1);
+                x = result.getBigDecimal(2);
+                y = result.getBigDecimal(3);
+                z = result.getBigDecimal(4);
 
-                tmpContent.append(index)
+                tmpContent.append(this.handleValue(index))
                         .append(FIELD_SEP)
-                        .append(DCF3.format(x))
+                        .append(this.handleValue(DCF3, x))
                         .append(FIELD_SEP)
-                        .append(DCF3.format(y))
+                        .append(this.handleValue(DCF3, y))
                         .append(FIELD_SEP)
-                        .append(DCF3.format(z))
+                        .append(this.handleValue(DCF3, z))
                         .append(EOL);
 
                 count++;
@@ -280,32 +330,32 @@ public class GeoCPMExport {
                             + "and   p3.id = t.geocpm_point_c_id "
                             + "order by index");
 
-            int index;
-            int indexA;
-            int indexB;
-            int indexC;
-            int neighbourA;
-            int neighbourB;
-            int neighbourC;
-            double roughness;
-            double loss;
-            double beHeightA = 0;
-            double beHeightB = 0;
-            double beHeightC = 0;
+            String index;
+            String indexA;
+            String indexB;
+            String indexC;
+            String neighbourA;
+            String neighbourB;
+            String neighbourC;
+            BigDecimal roughness;
+            BigDecimal loss;
+            BigDecimal beHeightA = BigDecimal.ZERO;
+            BigDecimal beHeightB = BigDecimal.ZERO;
+            BigDecimal beHeightC = BigDecimal.ZERO;
             boolean areHeightsNull;
 
             final StringBuilder tmpContent = new StringBuilder(this.prepContent.capacity() / 2);
 
             while (result.next()) {
-                index = result.getInt("index");
-                indexA = result.getInt("index_a");
-                indexB = result.getInt("index_b");
-                indexC = result.getInt("index_c");
-                neighbourA = result.getInt("neighbour_a_id");
-                neighbourB = result.getInt("neighbour_b_id");
-                neighbourC = result.getInt("neighbour_c_id");
-                roughness = result.getDouble("roughness");
-                loss = result.getDouble("loss");
+                index = this.handleValue(result.getString("index"));
+                indexA = this.handleValue(result.getString("index_a"));
+                indexB = this.handleValue(result.getString("index_b"));
+                indexC = this.handleValue(result.getString("index_c"));
+                neighbourA = this.handleValue(result.getString("neighbour_a_id"));
+                neighbourB = this.handleValue(result.getString("neighbour_b_id"));
+                neighbourC = this.handleValue(result.getString("neighbour_c_id"));
+                roughness = result.getBigDecimal("roughness");
+                loss = result.getBigDecimal("loss");
 
                 // assumption is that either all height_xxx columns have values or none of them
                 areHeightsNull = (result.getObject("be_height_a") == null)
@@ -313,9 +363,9 @@ public class GeoCPMExport {
                             || (result.getObject("be_height_c") == null);
 
                 if (!areHeightsNull) {
-                    beHeightA = result.getDouble("be_height_a");
-                    beHeightB = result.getDouble("be_height_b");
-                    beHeightC = result.getDouble("be_height_c");
+                    beHeightA = result.getBigDecimal("be_height_a");
+                    beHeightB = result.getBigDecimal("be_height_b");
+                    beHeightC = result.getBigDecimal("be_height_c");
                 }
 
                 tmpContent.append(index)
@@ -332,19 +382,19 @@ public class GeoCPMExport {
                         .append(FIELD_SEP)
                         .append(neighbourC)
                         .append(FIELD_SEP)
-                        .append(DCF3.format(roughness))
+                        .append(this.handleValue(DCF3, roughness))
                         .append(FIELD_SEP)
-                        .append(DCF3.format(loss));
+                        .append(this.handleValue(DCF3, loss));
 
                 if (areHeightsNull) {
                     tmpContent.append(EOL);
                 } else {
                     tmpContent.append(FIELD_SEP)
-                            .append(DCF3.format(beHeightA))
+                            .append(this.handleValue(DCF3, beHeightA))
                             .append(FIELD_SEP)
-                            .append(DCF3.format(beHeightB))
+                            .append(this.handleValue(DCF3, beHeightB))
                             .append(FIELD_SEP)
-                            .append(DCF3.format(beHeightC))
+                            .append(this.handleValue(DCF3, beHeightC))
                             .append(EOL);
                 }
 
@@ -381,16 +431,16 @@ public class GeoCPMExport {
                             + this.configId
                             + " order by identifier");
 
-            double t;
-            double value;
+            BigDecimal t;
+            BigDecimal value;
 
             final StringBuilder tmpContent = new StringBuilder(1000);
-            final ArrayList<Integer> ids = new ArrayList<Integer>();
+            final ArrayList<String> ids = new ArrayList<String>();
             final ArrayList<String> identifiers = new ArrayList<String>();
 
             while (result.next()) {
-                ids.add(result.getInt("id"));
-                identifiers.add(result.getString("identifier"));
+                ids.add(this.handleValue(result.getString("id")));
+                identifiers.add(this.handleValue(result.getString("identifier")));
             }
 
             final int numCurves = ids.size();
@@ -404,10 +454,13 @@ public class GeoCPMExport {
                                 + ids.get(i));
 
                 while (result.next()) {
-                    t = result.getDouble("t");
-                    value = result.getDouble("value");
+                    t = result.getBigDecimal("t");
+                    value = result.getBigDecimal("value");
 
-                    tmpContent.append(FIELD_SEP).append(DCF3.format(t)).append(FIELD_SEP).append(DCF3.format(value));
+                    tmpContent.append(FIELD_SEP)
+                            .append(this.handleValue(DCF3, t))
+                            .append(FIELD_SEP)
+                            .append(this.handleValue(DCF3, value));
                 }
 
                 tmpContent.append(EOL);
@@ -417,7 +470,6 @@ public class GeoCPMExport {
 
             this.prepContent.append(SECTION_CURVES).append(' ').append(numCurves).append(EOL);
             this.prepContent.append(tmpContent);
-//            this.prepContent.append(EOL);
         } finally {
             if (result != null) {
                 result.close();
@@ -447,23 +499,23 @@ public class GeoCPMExport {
                             + " and   sd.geocpm_curve_id    = c.id");
 
             String sourceDrainIdentifier;
-            int index;
-            double capacity;
+            String index;
+            BigDecimal capacity;
             String curveIdentifier;
 
             final StringBuilder tmpContent = new StringBuilder(this.prepContent.capacity() / 3);
 
             while (result.next()) {
-                sourceDrainIdentifier = result.getString(1);
-                index = result.getInt(2);
-                capacity = result.getDouble(3);
-                curveIdentifier = result.getString(4);
+                sourceDrainIdentifier = this.handleValue(result.getString(1));
+                index = this.handleValue(result.getString(2));
+                capacity = result.getBigDecimal(3);
+                curveIdentifier = this.handleValue(result.getString(4));
 
                 tmpContent.append(sourceDrainIdentifier)
                         .append(FIELD_SEP)
                         .append(index)
                         .append(FIELD_SEP)
-                        .append(DCF3.format(capacity))
+                        .append(this.handleValue(DCF3, capacity))
                         .append(FIELD_SEP)
                         .append(curveIdentifier)
                         .append(EOL);
@@ -502,21 +554,21 @@ public class GeoCPMExport {
 
             StringBuilder tmpContent;
 
-            final ArrayList<Integer> manholeIds = new ArrayList<Integer>();
+            final ArrayList<String> manholeIds = new ArrayList<String>();
             final ArrayList<StringBuilder> halfRecs = new ArrayList<StringBuilder>();
 
             while (result.next()) {
-                manholeIds.add(result.getInt(1)); // id
+                manholeIds.add(this.handleValue(result.getString(1))); // id
 
                 tmpContent = new StringBuilder(50);
 
-                tmpContent.append(result.getInt(2)).append(FIELD_SEP);                 // internal id
-                tmpContent.append(DCF2.format(result.getDouble(3))).append(FIELD_SEP); // cap_height
-                tmpContent.append(DCF2.format(result.getDouble(4))).append(FIELD_SEP); // entry_profile
-                tmpContent.append(DCF2.format(result.getDouble(5))).append(FIELD_SEP); // loss_overfall
-                tmpContent.append(DCF2.format(result.getDouble(6))).append(FIELD_SEP); // loss_emersion
-                tmpContent.append(DCF2.format(result.getDouble(7))).append(FIELD_SEP); // length_emersion
-                tmpContent.append(result.getString(8)).append(EOL);                    // length_emersion
+                tmpContent.append(result.getString(2)).append(FIELD_SEP);                             // internal id
+                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(3))).append(FIELD_SEP); // cap_height
+                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(4))).append(FIELD_SEP); // entry_profile
+                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(5))).append(FIELD_SEP); // loss_overfall
+                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(6))).append(FIELD_SEP); // loss_emersion
+                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(7))).append(FIELD_SEP); // length_emersion
+                tmpContent.append(this.handleValue(result.getString(8))).append(EOL);                 // length_emersion
 
                 halfRecs.add(tmpContent);
             }
@@ -535,7 +587,7 @@ public class GeoCPMExport {
                 numTriangles = 0;
                 tmpContent = new StringBuilder(100);
                 while (result.next()) {
-                    tmpContent.append(result.getString(1)).append(FIELD_SEP);
+                    tmpContent.append(this.handleValue(result.getString(1))).append(FIELD_SEP);
                     numTriangles++;
                 }
 
@@ -578,7 +630,7 @@ public class GeoCPMExport {
             final StringBuilder tmpContent = new StringBuilder(1000);
 
             while (result.next()) {
-                tmpContent.append(result.getInt(1)).append(EOL);
+                tmpContent.append(result.getString(1)).append(EOL);
                 count++;
             }
 
@@ -614,20 +666,19 @@ public class GeoCPMExport {
 
             StringBuilder tmpContent;
 
-            final ArrayList<Integer> bkIds = new ArrayList<Integer>();
+            final ArrayList<String> bkIds = new ArrayList<String>();
             final ArrayList<StringBuilder> halfRecs = new ArrayList<StringBuilder>();
 
             while (result.next()) {
-                bkIds.add(result.getInt(1)); // id
+                bkIds.add(this.handleValue(result.getString(1))); // id
 
                 tmpContent = new StringBuilder(50);
 
-                tmpContent.append(result.getInt(2)).append(FIELD_SEP);                 // index
-                tmpContent.append(result.getInt(3)).append(FIELD_SEP);                 // type
-                tmpContent.append(DCF2.format(result.getDouble(4))).append(FIELD_SEP); // height
-                tmpContent.append(result.getInt(5)).append(FIELD_SEP);                 // triangle_count_high
-                tmpContent.append(result.getInt(6));                                   // triangle_count_low
-
+                tmpContent.append(result.getString(2)).append(FIELD_SEP);                             // index
+                tmpContent.append(result.getString(3)).append(FIELD_SEP);                             // type
+                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(4))).append(FIELD_SEP); // height
+                tmpContent.append(result.getString(5)).append(FIELD_SEP);                             // triangle_count_high
+                tmpContent.append(result.getString(6));                                               // triangle_count_low
                 halfRecs.add(tmpContent);
             }
 
@@ -645,8 +696,8 @@ public class GeoCPMExport {
 
                 tmpContent = halfRecs.get(i);
                 while (result.next()) {
-                    tmpContent.append(FIELD_SEP).append(result.getInt(1));    // triangle index
-                    tmpContent.append(FIELD_SEP).append(result.getString(2)); // orientation
+                    tmpContent.append(FIELD_SEP).append(result.getString(1));                   // triangle index
+                    tmpContent.append(FIELD_SEP).append(this.handleValue(result.getString(2))); // orientation
                 }
 
                 tmpFinalContent.append(tmpContent).append(EOL);
@@ -689,13 +740,13 @@ public class GeoCPMExport {
             this.retrieveSourceDrains(stmt);
             this.retrieveManholes(stmt);
             this.retrieveMarked(stmt);
-            // this.retrieveRainCurves(stmt);
-            // RAINCURVE is not handled in the exporter
+            // RAINCURVE is not handled in the exporter (see comments in class header)
             this.prepContent.append(SECTION_RAINCURVE).append(" 0").append(EOL).append(EOL);
             this.retrieveBKs(stmt);
 
             final FileOutputStream fout = new FileOutputStream(this.outFile);
             final BufferedOutputStream bOut = new BufferedOutputStream(fout);
+
             bOut.write(this.prepContent.toString().getBytes());
             bOut.close();
 

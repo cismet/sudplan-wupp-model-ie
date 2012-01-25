@@ -37,11 +37,18 @@ import java.util.Properties;
 import java.util.TimeZone;
 
 /**
- * This is a rather dirty implementation of a GeoCPM.ein file parser.
+ * This is a rather dirty implementation of a GeoCPM.ein (GeoCPM interface description v0.5 (5th October 2011)) file
+ * parser.
  *
- * @version  $Revision$, $Date$
+ * <p>NOTE: GeoCPMImport already implements the handling of NULL values which will be defined in the next GeoCPM
+ * standard namely that NULL values are represented by "-1.#R"(see REGEX <NULL_TOKEN_FILE>).</p>
+ *
+ * <p>RAINCURVE is not handled by this importer.</p>
+ *
+ * @author   Martin Scholl (martin.scholl@cismet.de)
+ * @author   Benjamin Friedrich (benjamin.friedrich@cismet.de)
+ * @version  1.0 01/2012
  */
-// TODO: test with GeoCPMExport
 public class GeoCPMImport {
 
     //~ Static fields/initializers ---------------------------------------------
@@ -76,6 +83,9 @@ public class GeoCPMImport {
 
     public static final String FIELD_SEP = "     "; // NOI18N
 
+    public static final String NULL_TOKEN_FILE = "-1\\.#R";
+    public static final String NULL_TOKEN_DB = "NULL";
+
     //~ Instance fields --------------------------------------------------------
 
     /**
@@ -85,14 +95,6 @@ public class GeoCPMImport {
      * @param  configId  DOCUMENT ME!
      * @param  line      DOCUMENT ME!
      */
-
-// StringBuilder geomInsert = new StringBuilder("\nINSERT INTO geom (geo_field) VALUES (ST_MakeLine(array["); // NOI18N
-//    StringBuilder geoCpmInsert = new StringBuilder(
-//            "\nINSERT INTO geocpm_jt_breaking_edge_triangle (geocpm_breaking_edge_id, geocpm_triangle_id, orientation) ");
-//    StringBuilder geoUpdate = new StringBuilder("");
-//
-//    int bkCount = 0;
-
     private final transient DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss"); // NOI18N
 
     private final transient BufferedReader reader;
@@ -173,6 +175,9 @@ public class GeoCPMImport {
             prepare(con);
 
             String line = reader.readLine();
+
+            line = line.replaceAll(NULL_TOKEN_FILE, NULL_TOKEN_DB);
+
             String section = null;
             final ConfigStruct cs = new ConfigStruct();
             StringBuilder batchSQL = new StringBuilder();
@@ -247,6 +252,10 @@ public class GeoCPMImport {
                 }
 
                 line = reader.readLine();
+                if (line != null) {
+                    line = line.replaceAll(NULL_TOKEN_FILE, NULL_TOKEN_DB);
+                }
+
                 lineCount++;
             }
 
