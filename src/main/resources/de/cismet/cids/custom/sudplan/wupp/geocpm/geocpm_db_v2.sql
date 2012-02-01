@@ -196,7 +196,6 @@ CREATE TABLE geocpm_jt_manhole_triangle (
 
 CREATE TABLE tmp_bk_triangle_table 
 (
---   id BIGSERIAL PRIMARY KEY,
    configuration_id BIGINT, 
    triangle_index BIGINT, 
    breaking_edge_index BIGINT, 
@@ -206,34 +205,41 @@ CREATE TABLE tmp_bk_triangle_table
 
 CREATE INDEX geocpm_triangle_index_idx ON geocpm_triangle  (index);
 
---select ST_GeomFromEWKT('SRID=31466;POINT(2575894.570 5679685.710 159.280)')
 
---select ST_AsEWKT('01010000A0EA7A00008FC2F5480BA74341D7A3706D91AA5541295C8FC2F5E86340')
+-------------------------------------------------------------------------
+------------- GeoCPM Model Output Import ---------------------------------------
+-------------------------------------------------------------------------
+
+CREATE TABLE geocpm_aus_info
+(
+
+  geocpm_configuration_id     BIGINT PRIMARY KEY,
+  number_of_elements   BIGINT,                                     
+  number_of_edges      BIGINT,                                          
+  number_of_calc_steps BIGINT,                                           
+  volume_drain_source           NUMERIC(10, 2),
+  volume_street                 NUMERIC(10, 2), 
+  volume_all                    NUMERIC(10, 2), 
+  volume_loss                   NUMERIC(10, 2), 
+  volume_exchange_dyna_geocpm   NUMERIC(10, 2), 
+  volume_exchange_geocpm_dyna   NUMERIC(10, 2), 
+  rain_surface_elements         NUMERIC(10, 2), 
+  time_total                             NUMERIC(10, 2), 
+  time_time_step_calc                    NUMERIC(10, 2),
+  time_boundary_conditions               NUMERIC(10, 2), 
+  time_boundary_conditions_source_drain  NUMERIC(10, 2), 
+  time_boundary_conditions_manhole       NUMERIC(10, 2), 
+  time_boundary_conditions_triangle      NUMERIC(10, 2),
+  time_dgl                               NUMERIC(10, 2),
+  time_overhead                          NUMERIC(10, 2)
+);
 
 
---CREATE TABLE geocpm_point (
---    id BIGSERIAL PRIMARY KEY,
---    index INTEGER
---);
---SELECT AddGeometryColumn('public', 'geocpm_point', 'geom', 31466, 'POINT', 3);
---
---INSERT INTO geocpm_point (index, geom) VALUES (0, ST_GeomFromEWKT('SRID=31466;POINT(2575894.570 5679685.710 159.280)'));
---INSERT INTO geocpm_point (index, geom) VALUES (1, ST_GeomFromEWKT('SRID=31466;POINT(2575703.110 5680003.560 162.890)'));
---INSERT INTO geocpm_point (index, geom) VALUES (2, ST_GeomFromEWKT('SRID=31466;POINT(2575696.220 5680004.990 162.890)'));
---
---select ST_MakePolygon(ST_MakeLine(array[
---    (SELECT geom FROM geocpm_point WHERE index = 0),
---    (SELECT geom FROM geocpm_point WHERE index = 1),
---    (SELECT geom FROM geocpm_point WHERE index = 2)]));
---
---select ST_MakeLine(geom) from geocpm_point WHERE index = 0 or index = 1 or index = 2;
+CREATE TABLE geocpm_aus_max
+(
+  geocpm_configuration_id BIGINT,       
+  geocpm_triangle_id      BIGINT,          
+  water_level             NUMERIC(20, 10),
 
---ALTER TABLE geocpm_triangle ADD COLUMN tmp_point_a_id INTEGER;
---ALTER TABLE geocpm_triangle ADD COLUMN tmp_point_b_id INTEGER;
---ALTER TABLE geocpm_triangle ADD COLUMN tmp_point_c_id INTEGER;
---
---UPDATE geocpm_triangle gt SET geocpm_point_a_id = gp.id FROM geocpm_point gp WHERE gp.index = gt.tmp_point_a_id
---
---ALTER TABLE geocpm_triangle DROP COLUMN tmp_point_a_id;
---ALTER TABLE geocpm_triangle DROP COLUMN tmp_point_b_id;
---ALTER TABLE geocpm_triangle DROP COLUMN tmp_point_c_id;
+  PRIMARY KEY (geocpm_configuration_id, geocpm_triangle_id)
+);

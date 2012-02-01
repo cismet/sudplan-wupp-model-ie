@@ -93,6 +93,9 @@ public class GeoCPMExport {
     private static final DecimalFormat DCF3 = new DecimalFormat("#0.000", DCFS);
     private static final DecimalFormat DCF8 = new DecimalFormat("#0.00000000", DCFS);
 
+    public static final String META_DATA_FILE_NAME = "geocpm_export_meta.properties";
+    public static final String PROP_CONFIG_ID = "configuration_id";
+
     //~ Instance fields --------------------------------------------------------
 
     private final transient DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss"); // NOI18N
@@ -182,6 +185,25 @@ public class GeoCPMExport {
      */
     private String handleValue(final Timestamp value) {
         return (value == null) ? NULL_TOKEN_FILE : this.dateFormat.format(value);
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @throws  Exception  DOCUMENT ME!
+     */
+    private void createExportMetaData() throws Exception {
+        LOG.info("Start creation of export meta data...");
+        final Properties prop = new Properties();
+        prop.put(PROP_CONFIG_ID, this.configId);
+
+        final String parentFolder = this.outFile.getParent();
+        final File metaDataFile = new File(parentFolder, META_DATA_FILE_NAME);
+
+        final FileOutputStream fout = new FileOutputStream(metaDataFile);
+        prop.store(fout, "");
+
+        LOG.info("Export meta data has been created successfully");
     }
 
     /**
@@ -749,6 +771,8 @@ public class GeoCPMExport {
 
             bOut.write(this.prepContent.toString().getBytes());
             bOut.close();
+
+            this.createExportMetaData();
 
             LOG.info("EXPORT HAS BEEN COMPLETED SUCCESSFULLY FOR CONFIGURATION ID " + this.configId);
         } catch (final Exception e) {
