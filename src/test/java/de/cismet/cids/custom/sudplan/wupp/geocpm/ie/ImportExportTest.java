@@ -59,6 +59,7 @@ import static org.junit.Assert.*;
  * @author Benjamin Friedrich (benjamin.friedrich@cismet.de)
  * @version 1.0  01/2012
  */
+ @Ignore
 public class ImportExportTest 
 {    
     private GeoCPMImport importer;
@@ -82,7 +83,7 @@ public class ImportExportTest
     public ImportExportTest() {
     }
 
-    @BeforeClass
+    @BeforeClass @Ignore
     public static void setUpClass() throws Exception 
     {
         final Properties p = new Properties();
@@ -122,7 +123,7 @@ public class ImportExportTest
         
     }
 
-    @AfterClass
+    @AfterClass @Ignore
     public static void tearDownClass() throws Exception 
     {
         STMT.close();
@@ -134,13 +135,13 @@ public class ImportExportTest
         }
     }
     
-    @Before
+    @Before @Ignore
     public void setUp() throws Exception
     {
         this.testOutFile = new File(TEST_OUTPUT_FILE);
     }
     
-    @After
+    @After @Ignore
     public void tearDown() throws Exception
     {
         this.testOutFile.delete();
