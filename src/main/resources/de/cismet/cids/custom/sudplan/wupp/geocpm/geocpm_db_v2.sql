@@ -1,17 +1,20 @@
-
---SELECT DropGeometryColumn('public', 'geocpm_point', 'geom');
---SELECT DropGeometryColumn('public', 'geocpm_triangle', 'geom');
---SELECT DropGeometryColumn('public', 'geocpm_breaking_edge', 'geom');
---DROP TABLE geocpm_jt_manhole_triangle;
---DROP TABLE geocpm_manhole;
---DROP TABLE geocpm_jt_breaking_edge_triangle;
---DROP TABLE geocpm_breaking_edge;
---DROP TABLE geocpm_curve_value;
---DROP TABLE geocpm_curve;
---DROP TABLE geocpm_source_drain;
---DROP TABLE geocpm_triangle;
---DROP TABLE geocpm_point;
---DROP TABLE geocpm_configuration;
+-- 
+-- SELECT DropGeometryColumn('public', 'geocpm_point', 'geom');
+-- SELECT DropGeometryColumn('public', 'geocpm_triangle', 'geom');
+-- 
+-- DROP TABLE geocpm_jt_manhole_triangle;
+-- DROP TABLE geocpm_manhole;
+-- DROP TABLE geocpm_jt_breaking_edge_triangle;
+-- DROP TABLE geocpm_breaking_edge;
+-- DROP TABLE geocpm_source_drain;
+-- DROP TABLE geocpm_curve_value;
+-- DROP TABLE geocpm_curve;
+-- DROP TABLE geocpm_triangle;
+-- DROP TABLE geocpm_point;
+-- DROP TABLE geocpm_configuration;
+-- 
+-- DROP SEQUENCE geocpm_configuration_seq;
+-- DROP SEQUENCE geocpm_breaking_edge_seq;
 
 -- we use an integer pkey so that there won't be an issue with cids
 -- we don't use serial because of cids, too
@@ -41,16 +44,6 @@ CREATE TABLE geocpm_configuration (
 -- this is for cids
 CREATE SEQUENCE geocpm_configuration_seq MINVALUE 1 START 1;
 ALTER TABLE geocpm_configuration ALTER COLUMN id SET DEFAULT nextval('geocpm_configuration_seq');
-
--- configuration proxy to track changes to breaking edges
-CREATE SEQUENCE geocpm_configuration_proxy_seq MINVALUE 1 START 1;
-CREATE TABLE geocpm_configuration_proxy( 
-    id INTEGER PRIMARY KEY DEFAULT nextval('geocpm_configuration_proxy_seq'),
-    geocpm_configuration_id INTEGER,
-
-    FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration
-);
-
 
 CREATE TABLE geocpm_point (
     id BIGSERIAL PRIMARY KEY,
@@ -84,6 +77,8 @@ CREATE TABLE geocpm_triangle (
     FOREIGN KEY (geocpm_point_c_id) REFERENCES geocpm_point
 );
 SELECT AddGeometryColumn('public', 'geocpm_triangle', 'geom', 31466, 'POLYGON', 3);
+
+CREATE INDEX geocpm_triangle_index_idx ON geocpm_triangle  (index);
 
 -- we use an integer pkey so that there won't be an issue with cids
 -- we don't use serial because of cids, too
@@ -163,19 +158,11 @@ CREATE TABLE geocpm_manhole (
     id BIGSERIAL PRIMARY KEY,
     geocpm_configuration_id INTEGER,
     internal_id INTEGER,
---    cap_height NUMERIC(14, 2),
---    entry_profile NUMERIC(14, 2),
---    loss_overfall NUMERIC(14, 2),
---    loss_emersion NUMERIC(14, 2),
---    length_emersion NUMERIC(14, 2),
-
     cap_height NUMERIC(17, 2),
     entry_profile NUMERIC(17, 2),
     loss_overfall NUMERIC(17, 2),
     loss_emersion NUMERIC(17, 2),
     length_emersion NUMERIC(17, 2),
-
-
     name VARCHAR(200),
 
     FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration
@@ -189,22 +176,6 @@ CREATE TABLE geocpm_jt_manhole_triangle (
     FOREIGN KEY (geocpm_manhole_id) REFERENCES geocpm_manhole,
     FOREIGN KEY (geocpm_triangle_id) REFERENCES geocpm_triangle
 );
-
-
-
-------------
-
-CREATE TABLE tmp_bk_triangle_table 
-(
-   configuration_id BIGINT, 
-   triangle_index BIGINT, 
-   breaking_edge_index BIGINT, 
-   orientation char(1)
-);
-
-
-CREATE INDEX geocpm_triangle_index_idx ON geocpm_triangle  (index);
-
 
 -------------------------------------------------------------------------
 ------------- GeoCPM Model Output Import ---------------------------------------

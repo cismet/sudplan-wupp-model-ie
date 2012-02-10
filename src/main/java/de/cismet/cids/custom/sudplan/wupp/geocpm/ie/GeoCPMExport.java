@@ -102,6 +102,7 @@ public class GeoCPMExport {
 
     private final transient File outFile;
     private final transient int configId;
+    private final transient int deltaConfigId;
 
     private final transient StringBuilder prepContent;
 
@@ -120,11 +121,31 @@ public class GeoCPMExport {
      * @param   password  DOCUMENT ME!
      * @param   dbUrl     DOCUMENT ME!
      *
+     * @throws  ClassNotFoundException  DOCUMENT ME!
+     */
+    public GeoCPMExport(final int configId,
+            final File outFile,
+            final String user,
+            final String password,
+            final String dbUrl) throws ClassNotFoundException {
+        this(configId, -1, outFile, user, password, dbUrl);
+    }
+    /**
+     * todo: delta config handling
+     *
+     * @param   configId       DOCUMENT ME!
+     * @param   deltaConfigId  DOCUMENT ME!
+     * @param   outFile        DOCUMENT ME!
+     * @param   user           DOCUMENT ME!
+     * @param   password       DOCUMENT ME!
+     * @param   dbUrl          DOCUMENT ME!
+     *
      * @throws  ClassNotFoundException    DOCUMENT ME!
      * @throws  NullPointerException      DOCUMENT ME!
      * @throws  IllegalArgumentException  DOCUMENT ME!
      */
     public GeoCPMExport(final int configId,
+            final int deltaConfigId,
             final File outFile,
             final String user,
             final String password,
@@ -142,6 +163,7 @@ public class GeoCPMExport {
         }
 
         this.configId = configId;
+        this.deltaConfigId = deltaConfigId;
         this.outFile = outFile;
         this.prepContent = new StringBuilder(30 * 1024 * 1024); // allocate 60 MB (1 char = 2 Byte)
         this.user = user;

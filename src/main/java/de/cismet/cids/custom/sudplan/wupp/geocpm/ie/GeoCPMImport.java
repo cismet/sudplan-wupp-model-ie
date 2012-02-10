@@ -8,11 +8,11 @@
 package de.cismet.cids.custom.sudplan.wupp.geocpm.ie;
 
 import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.FileInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,7 +33,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import java.util.Date;
-import java.util.Properties;
 import java.util.TimeZone;
 
 /**
@@ -135,21 +134,69 @@ public class GeoCPMImport {
      * @throws  Exception  DOCUMENT ME!
      */
     public static void main(final String[] args) throws Exception {
-        final Properties p = new Properties();
-        p.put("log4j.appender.Remote", "org.apache.log4j.net.SocketAppender"); // NOI18N
-        p.put("log4j.appender.Remote.remoteHost", "localhost");                // NOI18N
-        p.put("log4j.appender.Remote.port", "4445");                           // NOI18N
-        p.put("log4j.appender.Remote.locationInfo", "true");                   // NOI18N
-        p.put("log4j.rootLogger", "ALL,Remote");                               // NOI18N
-        PropertyConfigurator.configure(p);
+//        final Properties p = new Properties();
+//        p.put("log4j.appender.Remote", "org.apache.log4j.net.SocketAppender"); // NOI18N
+//        p.put("log4j.appender.Remote.remoteHost", "localhost");                // NOI18N
+//        p.put("log4j.appender.Remote.port", "4445");                           // NOI18N
+//        p.put("log4j.appender.Remote.locationInfo", "true");                   // NOI18N
+//        p.put("log4j.rootLogger", "ALL,Remote");                               // NOI18N
+//        PropertyConfigurator.configure(p);
+//
+//        final GeoCPMImport importer = new GeoCPMImport(
+//                new FileInputStream("/Users/mscholl/projects/sudplan/wupp/geocpm_dyna_bruchkanten/GeoCPM.ein"),
+//                "postgres",
+//                "cismetz12",
+//                "jdbc:postgresql://192.168.100.12/sudplan_wupp");
+//
+//        System.out.println(importer.doImport());
 
-        final GeoCPMImport importer = new GeoCPMImport(
-                new FileInputStream("/Users/mscholl/projects/sudplan/wupp/GeoCPM_be_test.ein"),
-                "postgres",
-                "cismetz12",
-                "jdbc:postgresql://192.168.100.12/wp6_db");
+        final BufferedReader br = new BufferedReader(new FileReader("/Users/mscholl/Desktop/bk_connect_test"));
+        String line;
+        StringBuilder sb = new StringBuilder();
+        final GeoCPMImport gi = new GeoCPMImport(new ByteArrayInputStream(new byte[] {}), null, null, null);
+        int count = 0;
+        while ((line = br.readLine()) != null) {
+            gi.readBKConnect(sb, 1, line);
+            if ((++count % 10000) == 0) {
+                sb = new StringBuilder();
+            }
+        }
 
-        importer.doImport();
+        System.out.println("____");
+        System.out.println("----");
+
+        System.out.println(sb.toString());
+//        final String[] split = sb.toString().split(";");
+//
+//        Class.forName("org.postgresql.Driver"); // NOI18N
+//        final Connection con = DriverManager.getConnection(
+//                "jdbc:postgresql://192.168.100.12/testt",
+//                "postgres",
+//                "cismetz12");
+//        con.setAutoCommit(true);
+//        final Statement s = con.createStatement();
+//        int i = 0;
+//        for (final String sql : split) {
+//            s.executeUpdate(sql);
+//            ResultSet set = null;
+//            try {
+//                set = s.executeQuery(
+//                        "select isvalid(geo_field), astext(geo_field) from geom where id = (select max(id) from geom);");
+//                set.next();
+//                final boolean valid = set.getBoolean(1);
+//                if (!valid) {
+//                    System.out.println("invalid sql" + sql);
+//                }
+//            } catch (final Exception e) {
+//                i++;
+//                System.out.println(i + ": could not check validity: " + sql);
+//                e.printStackTrace();
+//            } finally {
+//                if (set != null) {
+//                    set.close();
+//                }
+//            }
+//        }
     }
 
     /**
@@ -157,19 +204,18 @@ public class GeoCPMImport {
      *
      * @return  DOCUMENT ME!
      *
-     * @throws  SQLException           DOCUMENT ME!
-     * @throws  IOException            DOCUMENT ME!
-     * @throws  ParseException         DOCUMENT ME!
-     * @throws  IllegalStateException  DOCUMENT ME!
+     * @throws  SQLException    DOCUMENT ME!
+     * @throws  IOException     DOCUMENT ME!
+     * @throws  ParseException  DOCUMENT ME!
      */
     public int doImport() throws SQLException, IOException, ParseException {
         LOG.info("BEGIN IMPORT");
         final long startTime = System.currentTimeMillis();
 
         final Connection con = DriverManager.getConnection(dbUrl, user, password);
-        int configId = -1;
+        con.setAutoCommit(false);
 
-        final Statement stmt = con.createStatement();
+        int configId = -1;
 
         try {
             prepare(con);
@@ -203,12 +249,12 @@ public class GeoCPMImport {
                     LOG.info("processing section: " + SECTION_TRIANGLES);
                     section = SECTION_TRIANGLES;
                 } else if (line.startsWith(SECTION_CURVES)) {
-                    LOG.info("processing section: " + SECTION_CURVES);
-
                     // insert points before post-processing triangles
                     this.insertBatch(batchSQL, con);
                     batchSQL = new StringBuilder();
                     this.postProcessTriangles(configId, con);
+
+                    LOG.info("processing section: " + SECTION_CURVES);
 
                     section = SECTION_CURVES;
                 } else if (line.startsWith(SECTION_SOURCE_DRAIN)) {
@@ -259,18 +305,26 @@ public class GeoCPMImport {
                 lineCount++;
             }
 
-            LOG.info("post processing BKConnect");
+            LOG.info("post processing BKConnect"); // NOI18N
             postProcessBKConnect(batchSQL, configId);
 
-            LOG.info("processing remaining statements");
+            LOG.info("processing remaining statements"); // NOI18N
             insertBatch(batchSQL, con);
 
             postProcess(configId, con);
+
+            con.commit();
+        } catch (final SQLException ex) {
+            LOG.error("error during import", ex); // NOI18N
+
+            con.rollback();
+
+            throw ex;
         } finally {
             try {
                 finish(con);
             } catch (final SQLException e) {
-                LOG.error("cannot perform import db", e); // NOI18N
+                LOG.error("cannot finish import", e); // NOI18N
 
                 throw e;
             } finally {
@@ -282,7 +336,7 @@ public class GeoCPMImport {
         final long endTime = System.currentTimeMillis();
         final SimpleDateFormat sdf = new SimpleDateFormat("HH' hours 'mm' minutes 'ss' seconds 'SSS' milliseconds'"); // NOI18N
         sdf.setTimeZone(TimeZone.getTimeZone("GMT+0"));
-        LOG.info("DONE SUCCESSFUL in "
+        LOG.info("DONE SUCCESSFUL in "                                                                                // NOI18N
                     + sdf.format(new Date((endTime - startTime) - sdf.getTimeZone().getRawOffset())));
 
         return configId;
@@ -296,22 +350,25 @@ public class GeoCPMImport {
      * @throws  SQLException  DOCUMENT ME!
      */
     private void prepare(final Connection con) throws SQLException {
-        LOG.info("PREPARING");
+        LOG.info("PREPARING"); // NOI18N
 
         final String queryA = "ALTER TABLE geocpm_triangle ADD COLUMN tmp_point_a_id INTEGER;"; // NOI18N
         final String queryB = "ALTER TABLE geocpm_triangle ADD COLUMN tmp_point_b_id INTEGER;"; // NOI18N
         final String queryC = "ALTER TABLE geocpm_triangle ADD COLUMN tmp_point_c_id INTEGER;"; // NOI18N
+        final String queryD = "CREATE TABLE tmp_bk_triangle_table ("                            // NOI18N
+                    + "configuration_id BIGINT, "                                               // NOI18N
+                    + "triangle_index BIGINT, "                                                 // NOI18N
+                    + "breaking_edge_index BIGINT, "                                            // NOI18N
+                    + "orientation char(1));";                                                  // NOI18N
 
         final Statement stmt = con.createStatement();
         try {
-            stmt.execute("BEGIN;");
             stmt.executeUpdate(queryA);
             stmt.executeUpdate(queryB);
             stmt.executeUpdate(queryC);
-            stmt.execute("COMMIT;");
+            stmt.executeUpdate(queryD);
         } catch (final SQLException e) {
-            LOG.error("cannot cleanup db", e); // NOI18N
-
+            LOG.error("cannot prepare db", e); // NOI18N
             throw e;
         } finally {
             stmt.close();
@@ -362,10 +419,11 @@ public class GeoCPMImport {
         LOG.info("postProcessing data for new configuration: " + configId); // NOI18N
 
         final PreparedStatement overviewGeomInsertStmt = con.prepareStatement(
-                "INSERT INTO geom (geo_field) VALUES ("                                                                                                   // NOI18N
-                        + "(SELECT ST_setsrid(st_transform(ST_Force_2d(ST_Union(geom)), 4326), -1) FROM geocpm_triangle WHERE geocpm_configuration_id = " // NOI18N
+                "INSERT INTO geom (geo_field) VALUES ("                                                                              // NOI18N
+                        + "(SELECT ST_setsrid(st_transform(ST_Force_2d(ST_SimplifyPreserveTopology(ST_Union(geom), 1)), 4326), -1) " // NOI18N
+                        + "FROM geocpm_triangle WHERE geocpm_configuration_id = "                                                    // NOI18N
                         + configId
-                        + "));",                                                                                                                          // NOI18N
+                        + "));",                                                                                                     // NOI18N
                 Statement.RETURN_GENERATED_KEYS);
         final Statement stmt = con.createStatement();
         try {
@@ -397,16 +455,20 @@ public class GeoCPMImport {
         final String queryA = "ALTER TABLE geocpm_triangle DROP COLUMN tmp_point_a_id;"; // NOI18N
         final String queryB = "ALTER TABLE geocpm_triangle DROP COLUMN tmp_point_b_id;"; // NOI18N
         final String queryC = "ALTER TABLE geocpm_triangle DROP COLUMN tmp_point_c_id;"; // NOI18N
-        final String queryD = "DELETE FROM tmp_bk_triangle_table;";                      // NOI18N
+        final String queryD = "DROP TABLE tmp_bk_triangle_table;";                       // NOI18N
 
         final Statement stmt = con.createStatement();
         try {
-            stmt.execute("BEGIN;");
             stmt.executeUpdate(queryA);
             stmt.executeUpdate(queryB);
             stmt.executeUpdate(queryC);
             stmt.executeUpdate(queryD);
-            stmt.execute("COMMIT;");
+
+            con.commit();
+        } catch (final SQLException e) {
+            LOG.error("cannot cleanup db", e); // NOI18N
+            con.rollback();
+            throw e;
         } finally {
             stmt.close();
         }
@@ -708,8 +770,9 @@ public class GeoCPMImport {
         batchSQL.append(
             "\nINSERT INTO tmp_bk_triangle_table (configuration_id, triangle_index, breaking_edge_index, orientation) VALUES");
 
+        // the tactic is here to create a line for every edge, then merge them into a continuous line
         final StringBuilder geomInsert = new StringBuilder(
-                "INSERT INTO geom (geo_field) (SELECT SETSRID( TRANSFORM( ST_FORCE_2D(ST_MakeLine(geom)), 4326), -1) FROM geocpm_point WHERE ");
+                "INSERT INTO geom (geo_field) (SELECT ST_SetSrid( ST_Transform( ST_Force_2D( ST_LineMerge( ST_Collect( Array[");
 
         char orientation;
         for (int i = 5; i < split.length; i += 2) {
@@ -726,26 +789,30 @@ public class GeoCPMImport {
             batchSQL.append(')');
 
             if (Character.isLowerCase(orientation)) {
-                geomInsert.append("id = (SELECT geocpm_point_")
-                        .append((orientation == 'a') ? 'b' : ((orientation == 'b') ? 'c' : 'a')) // NOI18N
-                .append("_id FROM geocpm_triangle WHERE index = ")
-                        .append(split[i])                                                        // NOI18N
-                .append(" AND geocpm_configuration_id = ")
-                        .append(configId)
-                        .append(")")                                                             // NOI18N
-                .append(" OR ");
+                //J-
+                geomInsert.append("ST_MakeLine((SELECT gp.geom FROM geocpm_point gp, geocpm_triangle gt")   // NOI18N
+                          .append(" WHERE gp.id = gt.geocpm_point_")                                        // NOI18N
+                          .append((orientation == 'a') ? 'b' : ((orientation == 'b') ? 'c' : 'a'))
+                          .append("_id AND gt.index = ").append(split[i])                                   // NOI18N
+                          .append(" AND gt.geocpm_configuration_id = ").append(configId).append("), ")      // NOI18N
+                          .append("(SELECT gp.geom FROM geocpm_point gp, geocpm_triangle gt")               // NOI18N
+                          .append(" WHERE gp.id = gt.geocpm_point_")                                        // NOI18N
+                          .append((orientation == 'a') ? 'c' : ((orientation == 'b') ? 'a' : 'b'))
+                          .append("_id AND gt.index = ").append(split[i])                                   // NOI18N
+                          .append(" AND gt.geocpm_configuration_id = ").append(configId).append(")), ");    // NOI18N
+                //J+
             }
         }
 
-        geomInsert.append("id = (SELECT geocpm_point_").append(split[split.length - 1])    // NOI18N
-        .append("_id FROM geocpm_triangle WHERE index = ").append(split[split.length - 2]) // NOI18N
-        .append(" AND geocpm_configuration_id = ").append(configId).append(")  );");       // NOI18N
+        // remove last ", " from the MakeLine appends
+        geomInsert.delete(geomInsert.length() - 2, geomInsert.length());
+        geomInsert.append("]))), 4326), -1));"); // NOI18N
 
         batchSQL.append(';');
         batchSQL.append(geomInsert);
 
-        batchSQL.append("UPDATE geocpm_breaking_edge SET geom = (SELECT max(id) FROM geom) WHERE index = ") // NOI18N
-        .append(split[3]).append(" AND geocpm_configuration_id = ").append(configId).append(";");           // NOI18N
+        batchSQL.append("UPDATE geocpm_breaking_edge SET geom = (SELECT currval('geom_seq')) WHERE index = ") // NOI18N
+        .append(split[0]).append(" AND geocpm_configuration_id = ").append(configId).append(";");           // NOI18N
     }
 
     /**
