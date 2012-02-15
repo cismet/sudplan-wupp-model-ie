@@ -7,6 +7,7 @@
 ****************************************************/
 package de.cismet.cids.custom.sudplan.wupp.geocpm.ie;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
@@ -14,6 +15,7 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 
 import java.math.BigDecimal;
 
@@ -27,12 +29,16 @@ import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+
+import de.cismet.cids.custom.sudplan.geocpmrest.io.Rainevent;
 
 /**
  * GeoCPMExport exports GeoCPM data which was imported by {@link GeoCPMImport} before to a format which is compliant to
@@ -89,12 +95,20 @@ public class GeoCPMExport {
     public static final String NULL_TOKEN_FILE = "-1.#R";
 
     private static final DecimalFormatSymbols DCFS = DecimalFormatSymbols.getInstance(Locale.ENGLISH);
+    private static final DecimalFormat DCF1 = new DecimalFormat("#0.0", DCFS);
     private static final DecimalFormat DCF2 = new DecimalFormat("#0.00", DCFS);
     private static final DecimalFormat DCF3 = new DecimalFormat("#0.000", DCFS);
     private static final DecimalFormat DCF8 = new DecimalFormat("#0.00000000", DCFS);
 
     public static final String META_DATA_FILE_NAME = "geocpm_export_meta.properties";
     public static final String PROP_CONFIG_ID = "configuration_id";
+
+    // preallocate space for 10 records
+    private static final int DYNA_ALL_RECORDS_INIT_SIZE = 1510;
+    private static final int DYNA_RECORD_SIZE = 150;
+    public static final String DYNA_FILE = "DYNA.EIN";
+
+    private static final String DYNA_ENC = "ISO-8859-1";
 
     //~ Instance fields --------------------------------------------------------
 
@@ -109,6 +123,9 @@ public class GeoCPMExport {
     private final transient String user;
     private final transient String password;
     private final transient String dbUrl;
+
+    // builder reused in method fillWithBlanks()
+    private final transient StringBuilder fillBuilder;
 
     //~ Constructors -----------------------------------------------------------
 
@@ -170,6 +187,8 @@ public class GeoCPMExport {
         this.password = password;
         this.dbUrl = dbUrl;
 
+        this.fillBuilder = new StringBuilder(10);
+
         Class.forName("org.postgresql.Driver"); // NOI18N
     }
 
@@ -217,7 +236,7 @@ public class GeoCPMExport {
     private void createExportMetaData() throws Exception {
         LOG.info("Start creation of export meta data...");
         final Properties prop = new Properties();
-        prop.put(PROP_CONFIG_ID, this.configId);
+        prop.put(PROP_CONFIG_ID, String.valueOf(this.configId));
 
         final String parentFolder = this.outFile.getParent();
         final File metaDataFile = new File(parentFolder, META_DATA_FILE_NAME);
@@ -806,6 +825,166 @@ public class GeoCPMExport {
 
             if (con != null) {
                 con.close();
+            }
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   token     DOCUMENT ME!
+     * @param   numChars  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
+    private StringBuilder fillWithBlanks(final String token, final int numChars) {
+        // reset StringBuilder instance
+        this.fillBuilder.setLength(0);
+
+        // token already consists of numChars characters
+        if (token.length() == numChars) {
+            this.fillBuilder.append(token);
+            return this.fillBuilder;
+        }
+
+        // append blanks in front of the token until it has numChars characters
+        for (int i = token.length(); i < numChars; i++) {
+            this.fillBuilder.append(' ');
+        }
+
+        return this.fillBuilder.append(token);
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   rainEvent  DOCUMENT ME!
+     *
+     * @throws  NullPointerException  DOCUMENT ME!
+     * @throws  RuntimeException      DOCUMENT ME!
+     */
+    public void generateDYNA(final Rainevent rainEvent) {
+        if (rainEvent == null) {
+            throw new NullPointerException("Rainevent must not be null");
+        }
+
+        Connection con = null;
+        Statement stmt = null;
+
+        try {
+            con = DriverManager.getConnection(dbUrl, user, password);
+            stmt = con.createStatement();
+
+            // obtain base64-encoded dyna representation from configuration
+            final ResultSet result = stmt.executeQuery(" SELECT dyna_form "
+                            + " FROM geocpm_configuration "
+                            + " WHERE id =" + this.configId);
+            result.next();
+
+            final String base64Encoding = result.getString(1);
+            final String dynaForm = new String(Base64.decodeBase64(base64Encoding.getBytes()), DYNA_ENC);
+
+            // preallocate space for 10 records
+            final StringBuilder allRecords = new StringBuilder(DYNA_ALL_RECORDS_INIT_SIZE);
+
+            final StringBuilder rainDataRecord = new StringBuilder(DYNA_RECORD_SIZE);
+
+            // according to example sent by Mr Gusel, the record no. starts with value '1'
+            // (instead of 0 which is specified in the DYNA v4 manual)
+            int recordNo = 1;
+
+            // interval obtained by rain event is given in seconds,
+            // however DYNA needs it in minutes -> conversion:
+            double interval = rainEvent.getInterval();
+            interval /= 60.0;
+            final String intervalString = DCF1.format(interval);
+
+            // create header of first data record
+            rainDataRecord.append("07")                      // Col. 1 - 2 Datenart
+            .append(' ')                                     // Col. 3
+            .append("  ")
+                    .append(1)                               // Col. 4 - 6 Nummer des Modellregens (1 -99)
+            .append(' ')                                     // Col. 7
+            .append(' ')
+                    .append(recordNo)                        // Col. 8 - 9 Datensatznummer
+            .append(' ')                                     // Col. 10
+            .append(this.fillWithBlanks(intervalString, 10)) // Col. 11 - 20
+            .append("          ");                           // Col. 21 - 30
+
+            // process precipitation data
+            final List<Double> precipitations = rainEvent.getPrecipitations();
+            final int numRecords = precipitations.size();
+
+            String precipitation;
+
+            for (int i = 0; i < numRecords; i++) {
+                precipitation = DCF2.format(precipitations.get(i));
+                if (precipitation.length() > 10) {
+                    LOG.warn("Precipitation value '" + precipitation + "'consists of too many characters -> Ignored");
+                    continue;
+                }
+
+                if ((rainDataRecord.length() + precipitation.length()) <= DYNA_RECORD_SIZE) {
+                    rainDataRecord.append(this.fillWithBlanks(precipitation, 10));
+                } else // maximal record length exceeded: create new sub-record, if possible
+                {
+                    // if there are more than the maximally allowed number of records, abort export.
+                    if (recordNo == 99) {
+                        LOG.error("Maximal number of records (99) is exceeded -> Export is aborted");
+                        throw new RuntimeException("Maximal number of records (99) is exceeded -> Export is aborted");
+                    } else {
+                        // append recent record to StringBuilder for final output
+                        allRecords.append(rainDataRecord).append('\n');
+                        // reset rainData object
+                        rainDataRecord.setLength(0);
+
+                        recordNo++;
+
+                        // set-up initial sub-record header
+                        rainDataRecord.append("07")                      // Col. 1 - 2 Datenart
+                        .append(' ')                                     // Col. 3
+                        .append("  ").append(1)                          // Col. 4 - 6 Nummer des Modellregens (1 -99)
+                        .append(' ')                                     // Col. 7
+                        .append(' ').append(recordNo)                    // Col. 8 - 9 Datensatznummer
+                        .append(' ')                                     // Col. 10
+                        .append("          ")                            // Col. 11 - 20
+                        .append("          ")                            // Col. 21 - 30
+                        .append(this.fillWithBlanks(precipitation, 10)); // precipation value
+                    }
+                }
+            }
+
+            // append recent record to StringBuilder for final output
+            if (rainDataRecord.length() > 0) {
+                allRecords.append(rainDataRecord).append('\n');
+            }
+
+            // dyna form retrieved from db contains placeholder which is compatible to MessageFormat
+            // TODO remove empty string before final test run
+            final String finalOutput = MessageFormat.format(dynaForm, allRecords.toString());
+
+            // create DYNA.EIN file in the same folder where the meta-data file is located
+            final String parentFolder = this.outFile.getParent();
+            final File dynaFile = new File(parentFolder, DYNA_FILE);
+
+            final FileOutputStream fout = new FileOutputStream(dynaFile);
+            fout.write(finalOutput.getBytes(DYNA_ENC));
+            fout.close();
+        } catch (final Exception e) {
+            LOG.error(e.getMessage(), e);
+            throw new RuntimeException(e);
+        } finally {
+            try {
+                if (stmt != null) {
+                    stmt.close();
+                }
+
+                if (con != null) {
+                    con.close();
+                }
+            } catch (final Exception e) {
+                LOG.error(e.getMessage(), e);
+                throw new RuntimeException(e);
             }
         }
     }

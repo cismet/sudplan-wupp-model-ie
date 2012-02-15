@@ -468,10 +468,11 @@ public final class GeoCPMAusImport {
                 this.restPassword);
 
         final AttributesAwareGSFeatureTypeEncoder featureType = new AttributesAwareGSFeatureTypeEncoder();
-        featureType.setName(VIEW_NAME_BASE + this.configId); // view name
+        featureType.setName(VIEW_NAME_BASE + this.configId);  // view name as feature type name
         featureType.setEnabled(true);
         featureType.setSRS("EPSG:31466");
         featureType.setProjectionPolicy(ProjectionPolicy.FORCE_DECLARED);
+        featureType.setTitle(VIEW_NAME_BASE + this.configId); // view name as feature type title
 
         GSAttributeEncoder attribute = new GSAttributeEncoder();
         attribute.addEntry("name", "geom");
@@ -509,9 +510,6 @@ public final class GeoCPMAusImport {
             result.getDouble("lat_lon_xmax"),
             result.getDouble("lat_lon_ymax"),
             CRS);
-
-//              featureType.setNativeBoundingBox(2575242.5, 5679518, 2575965.75, 5680429, CRS);
-//        featureType.setLatLonBoundingBox(7.077, 51.245, 7.088, 51.254, CRS);
 
         final GSLayerEncoder layer = new GSLayerEncoder();
         layer.setEnabled(true);

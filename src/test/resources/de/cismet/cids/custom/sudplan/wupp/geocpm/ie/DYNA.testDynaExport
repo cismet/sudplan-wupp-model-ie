@@ -1,0 +1,335 @@
++++BEME:KANAL++, Version 9.04.54;
+## Anmerkung zu den Eingabedaten
+## zul. Angaben : max. 60 Zeichen ; Standard : Leerzeichen
+## Typ : A
+##
++++BEZU:mNN;
+## Einheit in z-Richtung
+## zul. Angaben : ; Standard : mNN
+## Typ : A
+##
++++DATU:JA;
+## Angabe des Tagesdatums
+## zul. Angaben : NEIN ; Standard : Systemdatum
+## Typ : A
+##
++++DRUC:110;
+## maximale Anzahl der Zeilen pro Druckseite
+## zul. Angaben : 60-120 ; Standard : 110
+## Einheit : Zeilen/Seite ; Typ : N
+##
++++HMAS:100;
+## Höhenmassstab für das Zeichnen der Längsschnitte
+## zul. Angaben : 1-1000 ; Standard : 100 (d.h. 1:100)
+## Typ : N
+##
++++HMAX:81.000000;
+## Plangrösse für das Zeichnen der Längsschnitte
+## zul. Angaben : 55-84 ; Standard : 59.4
+## Einheit : cm ; Typ : N
+##
++++KOPF:Haus für Umweltinformatik (Ufo);
+## Projektueberschrift
+## zul. Angaben : max. 60 Zeichen ; Standard : Leerzeichen
+## Typ : A
+##
++++LMAS:1000;
+## Längenmassstab für das Zeichnen der Längsschnitte
+## zul. Angaben : 100-25000 ; Standard : 1000
+## Typ : N
+##
++++LMAX:115.000000;
+## max. Länge des Plotters, Zeichentisches,...
+## zul. Angaben : 80-1500 ; Standard : 115.0
+## Einheit : cm ; Typ : N
+##
++++PTEX:Euler2;
+## Projektkennzeichnung für den Kanallängsschnitt
+## zul. Angaben : max. 16 Zeichen ; Standard : Leerzeichen
+## Typ : A
+##
++++SEIT:NEIN;
+## Seitenzahlen für Ausdrucke
+## zul. Angaben : JA/NEIN ; Standard : NEIN
+## Typ : A
+##
++++STEM:18.500000;
+## Länge des Stempelfeldes
+## zul. Angaben : 1-30 ; Standard : 18.5
+## Einheit : cm ; Typ : N
+##
++++ANFA:160.000000;
+## Anfangsversickerung
+## zul. Angaben : 0-1000 ; Standard : 160.0
+## Einheit : l/(s*ha) ; Typ : N
+##
++++ANTE:1.000000;
+## Anteil der abflusswirksamen durchlässigen Fläche
+## zul. Angaben : 0.5-1.5 ; Standard : 1
+## Einheit : 100% ; Typ : N
+##
++++AUSM:0.900000;
+## Auslastungsfaktor Mischwasserhaltung
+## zul. Angaben : 0.5-1.5 ; Standard : 0.9
+## Einheit : 100% ; Typ : N
+##
++++AUSR:0.900000;
+## Auslastungsfaktor Regenwasserhaltung
+## zul. Angaben : 0.5-1.5 ; Standard : 0.9
+## Einheit : 100% ; Typ : N
+##
++++AUSS:0.900000;
+## Auslastungsfaktor Schmutzwasserhaltung
+## zul. Angaben : 0.5-1.5 ; Standard : 0.9
+## Einheit : 100% ; Typ : N
+##
++++BENE:1.000000;
+## Benetzungsverluste für durchlässige Flächen
+## zul. Angaben : 0-5 ; Standard : 1
+## Einheit : mm ; Typ : N
+##
++++BLAE:35.000000;
+## Fliesslänge für befestigte Flächen
+## zul. Angaben : 0-100 ; Standard : 35
+## Einheit : m ; Typ : N
+##
++++BMUL(1):1.000000;
++++BMUL(2):0.900000;
++++BMUL(3):0.800000;
++++BMUL(4):0.600000;
+## Muldenverluste für befestigte Flächen für die 4 Neigungsgruppen
+## BMUL(1) -- z.A. : 0-10 ; St. : 1   ; Ein. : mm ; Typ : NX
+## BMUL(2) -- z.A. : 0-10 ; St. : 0.9 ; Ein. : mm ; Typ : NX
+## BMUL(3) -- z.A. : 0-10 ; St. : 0.8 ; Ein. : mm ; Typ : NX
+## BMUL(4) -- z.A. : 0-10 ; St. : 0.6 ; Ein. : mm ; Typ : NX
+##
++++DLAE:50.000000;
+## Fliesslänge für durchlässige Flächen
+## zulässige Angaben : 0-1000 ; Standard : 50
+## Einheit : m ; Typ : N
+##
++++DMUL(1):4.000000;
++++DMUL(2):3.000000;
++++DMUL(3):2.500000;
++++DMUL(4):2.000000;
+## Muldenverluste für durchlässige Flächen für die 4 Neigungsgruppen
+## DMUL(1) -- z.A. : 0-10 ; St. : 4   ; Ein. : mm ; Typ : NX
+## DMUL(2) -- z.A. : 0-10 ; St. : 3   ; Ein. : mm ; Typ : NX
+## DMUL(3) -- z.A. : 0-10 ; St. : 2.5 ; Ein. : mm ; Typ : NX
+## DMUL(4) -- z.A. : 0-10 ; St. : 2   ; Ein. : mm ; Typ : NX
+##
++++DNMI:200;
+## Mindestdurchmesser bei Dimensionierung Mischwasserkanal
+## zul. Angaben : 50-800 ; Standard : 300
+## Einheit : mm ; Typ : N
+##
++++DNRE:200;
+## Mindestdurchmesser bei Dimensionierung Regenwasserkanal
+## zul. Angaben : 50-800 ; Standard : 300
+## Einheit : mm ; Typ : N
+##
++++DNSC:100;
+## Mindestdurchmesser bei Dimensionierung Schmutzwasserkanal
+## zul. Angaben : 50-400 ; Standard : 100
+## Einheit : mm ; Typ : N
+##
++++ENDV:20.000000;
+## Endversickerung
+## zul. Angaben : 0-100 ; Standard : 20
+## Einheit : l/(s*ha) ; Typ : N
+##
++++FREM:0;
+## Fremdwasserzuschlag in Prozent der Schmutzwasserabflussspende
+## zul. Angaben : 0-500 ; Standard : 0
+## Einheit : % ; Typ : N
+##
++++HAEU:1.000000;
+## Regenhäufigkeit
+## zul. Angaben : 0-10 ; Standard : 1
+## Einheit : 1/a ; Typ : N
+##
++++KSTB:70.000000;
+## Geschwindigkeitsbeiwert für befestigte Flächen
+## zul. Angaben : 0-200 ; Standard : 70
+## Einheit : m^(1/3) / s ; Typ : N
+##
++++KSTD:4.000000;
+## Geschwindigkeitsbeiwert für durchlässige Flächen
+## zul. Angaben : 0-100 ; Standard : 4
+## Einheit : m^(1/3) / s ; Typ : N
+##
++++REGE:MODE;
+## Berechnung entweder mit BLOCK- oder MODELLregen
+## zul. Angaben : MODE/BLOC ; Standard : MODE
+## Typ : A
+##
++++RKON:0.056000;
+## Rückgangskonstante
+## zul. Angaben : 0-0.1 ; Standard : 0.055
+##
++++SCHM:150.000000;
+## Schmutzwasseranfall
+## zul. Angaben : 0-1000 ; Standard : 250
+## Einheit : l/(E*d) ; Typ : N
+##
++++SPEN:100.000000;
+## 15-min-Regenspende für Regenhäufigkeit n=1
+## zul. Angaben : 0.5-500 ; Standard : 100
+## Einheit : l/(s*ha) ; Typ : N
+##
++++SPIT:14.000000;
+## Spitzenanfall h : 24/h ist der Multiplikator des mittl. Schmutzw.abfl.
+## zul. Angaben : 1-30 ; Standard : 14
+## Typ : N
+##
++++STAF:3;
+## Nummer der zu verwendenden Blockregenstaffel
+## zul. Angaben : 1-9 ; Standard : 3
+## Typ : N
+##
++++VERF:POST;
++++VERD:0.400000;
+## Anzusetzender Dauerverlust inklusive Verdunstung
+## zul. Angaben : 0-5 ; Standard : 1.4
+## Einheit : l/(s*ha) ; Typ : N
+##
++++VMIN:0.300000;
+## anzusetzende Mindestgeschwindigkeit
+## zul. Angaben : 0.05-1.00 ; Standard : 0.3
+## Einheit : m/s ; Typ : N
+##
+++SCHL;INIT;
+## Schlüsselwerte
+##
+## 1 Mat. Abflusssp Betr.rauh.Stricklerw
+## ± ²²²² ±±±±±±±±±±²²²²²²²²²²±±±±±±±±±±
+05 0 Az     0.000000  0.250000 15.000000100.000000  5.000000  0.062500  2.500000  4.000000  3.000000  2.000000  2.500000  0.000000
+05 1 B      0.050000  0.400000 20.000000150.000000 16.670000  0.055500  4.000000  4.000000  3.000000  2.000000  2.500000 10.000000
+05 2 Bb     0.100000  0.500000 25.000000166.667000 13.330000  0.043500 70.000000  1.000000  0.900000  0.600000  0.800000 50.000000
+05 3 Bw     0.200000  0.700000 30.000000166.667000 20.000000  0.055500 80.000000  1.000000  0.900000  0.600000  0.800000100.000000
+05 4 Fz     0.300000  0.750000 35.000000300.000000 26.670000  0.083300                                                  150.000000
+05 5 GFK    0.500000  1.000000 50.000000                                                                                200.000000
+05 6 GG     0.700000  1.500000100.000000                                                                                300.000000
+05 7 GGG    1.000000  3.000000                                                                                          400.000000
+05 8 MA     2.000000 10.000000                                                                                          428.571430
+05 9 OB                                                                                                                 450.000000
+05 a OBb                                                                                                                500.000000
+05 b PC                                                                                                                           
+05 c PCC                                                                                                                          
+05 d PEHD                                                                                                                         
+05 e Ph                                                                                                                           
+05 f PhB                                                                                                                          
+05 g PP                                                                                                                           
+05 h PVC                                                                                                                          
+05 i PVCU                                                                                                                         
+05 j Sb                                                                                                                           
+05 k Spb                                                                                                                          
+05 l St                                                                                                                           
+05 m Stz                                                                                                                          
+05 n Stzw                                                                                                                         
+++MODE;INIT;
+## Modellregen
+##
+### Euler2_Modellregen D=60min T=100a
+##  Nr DNr Zeitint  Zeitstufe Regenspenden für Stufe 1-12, 13-24, usw.
+##  ±± ²² ±±±±±±±±±±²²²²²²²²²²±±±±±±±±±±²²²²²²²²²²±±±±±±±±±±²²²²²²²²²²±±±±±±±±±±²²²²²²²²²²±±±±±±±±±±²²²²²²²²²²±±±±±±±±±±²²²²²²²²²²±±±±±±±±±±²²²²²²²²²²
+07   1  1        5.0                3.00      3.00      3.00     13.00     13.00     13.00     13.00     13.00     40.00     20.00     20.00     15.00
+07   1  2                           0.00      0.00      3.00      3.00      3.00          
+++STRA;INIT;
+## Strassen
+##
+++KANA;EINW;
+## Haltungen
+##
+++SOND;
+## Sonderbauwerke
+##
+++NETZ;
+## Netzverknüpfung
+##
+++DECK;
+## Eingabe der Enddeckelhöhen (Datenart 41)
+##
+++GRUN;
+## Verarbeitung und Ausgabe der Grundlagen für die Berechnung
+##
+++BERE;INIT;LUFT;
+## Berechnung des Transportes im Kanalnetz einschliesslich
+## der Abflusskonzentration auf der Oberfläche
+##
+ANFA:1
+## Nummer des ersten zu berechnenden Regens
+## zul. Angaben : 1-99 ; Standard : 1
+## Einheit : Nr.
+##
+ENDE:4
+## Nummer des letzten zu berechnenden Regens
+## zul. Angaben : 1-99 ; Standard : 1
+## Einheit : Nr.
+##
+GENA:0.000100
+## Genauigkeit der Flutkurven
+## zul. Angaben : 0.00001-0.01 ; Standard : 0.001
+## Einheit : 
+##
+GRUN:0.785000
+## Grundfläche des Standardschachtes im Netz
+## zul. Angaben : 0.01-20.0 ; Standard : 1.0
+## Einheit : m^2
+##
+MAXI:120.000000
+## Maximalrechenzeit
+## zul. Angaben : 10-1000 ; Standard : 100
+## Einheit : min
+##
+MINI:20.000000
+## Mindestrechenzeit
+## zul. Angaben : 0-1000 ; Standard : 20
+## Einheit : min
+##
+PROZ:101.000000
+## Prozentsatz von aus- zu eingelaufener Mischwassermenge
+## zul. Angaben : 75-105.0; Standard : 90
+##
+SPAL:0.050000
+## Breite des schmalen Spaltes über dem Scheitel jeder Haltung
+## zul. Angaben : 0.02-1.0 ; Standard : 0.1
+## Einheit : 100%
+##
+STRA:100.000000
+## Angeschlossene Strassenfläche pro Schacht (global)
+## zul. Angaben : 0.1-1000 ; Standard : 100
+## Einheit : m^2
+##
+TRAT
+TRFT:2.000000
+TROC:20.000000
+TRMX:600.000000
+VDEL:50.000000
+## Prozentsatz, der die Volumenänderung innerhalb eines Rechenschrittes begrenzt
+## zul. Angaben : 1-100 ; Standard : 10
+## Einheit : %
+##
+VERL:0.000000
+## Standardverluste im Schacht
+## zul. Angaben : 0.0-3.0 ; Standard : 0.0  (Regelschacht: 0.1; Sonderschacht:0.3)
+## Einheit : 
+##
+XDEL:150.000000
+## Maximal zulässiges Dx der hydrodynamischen Berechnung
+## zul. Angaben : 5 - 10000 ; Standard : 200
+## Einheit : m
+##
+ZUZE:0.000000
+## Zurechnungszeit
+## zul. Angaben : 0-1000 ; Standard : 0
+## Einheit : min
+##
+++BANK;EINW;
+## Erstellen der Datenbankschnittstelle DYNA.AUS
+##
+++ERGE;BAUW;
+++ERGE;HALT;ABSO;
+++PLOT;ABFL;ENER;WASS;
+## Erstellen einer Kanallängsschnittdatei (Datenart 21)
+##

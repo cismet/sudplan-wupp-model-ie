@@ -16,6 +16,7 @@
  */
 package de.cismet.cids.custom.sudplan.wupp.geocpm.ie;
 
+import de.cismet.cids.custom.sudplan.geocpmrest.io.Rainevent;
 import de.cismet.remotetesthelper.ws.rest.RemoteTestHelperClient;
 import java.io.BufferedReader;
 import java.io.File;
@@ -27,6 +28,7 @@ import java.io.BufferedInputStream;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.zip.GZIPInputStream;
@@ -59,7 +61,7 @@ import static org.junit.Assert.*;
  * @author Benjamin Friedrich (benjamin.friedrich@cismet.de)
  * @version 1.0  01/2012
  */
- @Ignore
+
 public class ImportExportTest 
 {    
     private GeoCPMImport importer;
@@ -76,16 +78,17 @@ public class ImportExportTest
     private static final String DB_PWD    = "cismetz12";
     
     
-    private static final String TEST_DB_NAME = "simple_geocpm_test_db";
+    private static final String TEST_DB_NAME = "simple_geocpm_test_db2";
     private static final RemoteTestHelperClient SERVICE = new RemoteTestHelperClient();
     
     
     public ImportExportTest() {
     }
 
-    @BeforeClass @Ignore
+    
+    @BeforeClass
     public static void setUpClass() throws Exception 
-    {
+    {    
         final Properties p = new Properties();
         p.put("log4j.appender.Remote", "org.apache.log4j.net.SocketAppender");
         p.put("log4j.appender.Remote.remoteHost", "localhost");
@@ -94,45 +97,49 @@ public class ImportExportTest
         p.put("log4j.rootLogger", "ALL,Remote");
         org.apache.log4j.PropertyConfigurator.configure(p);
 
-        if (! Boolean.valueOf(SERVICE.initCidsSystem(TEST_DB_NAME))) 
-        {
-            throw new IllegalStateException("cannot initilise test db");
-        }
+        
+//        SERVICE.dropDatabase(TEST_DB_NAME);
+        
+        
+//        if (! Boolean.valueOf(SERVICE.initCidsSystem(TEST_DB_NAME))) 
+//        {
+//            throw new IllegalStateException("cannot initilise test db");
+//        }
         
         CON  = SERVICE.getConnection(TEST_DB_NAME);
         STMT = CON.createStatement();    
 
-        try
-        {
-            STMT.executeUpdate("drop view geosuche;"); // removed as geometry column modification wouldn't be possible otherwise
-            STMT.execute("SELECT DropGeometryColumn('public','geom','geo_field');");
-            STMT.execute("SELECT AddGeometryColumn( 'public','geom','geo_field', -1, 'GEOMETRY', 2 );");
-            
-        }
-        catch(final SQLException e)
-        {
-            e.printStackTrace();
-            e.getNextException().printStackTrace();
-            throw e;
-        }
-        
-        final ScriptRunner runner = new ScriptRunner(CON, true, true);
-        runner.runScript(new BufferedReader(
-                                 new InputStreamReader(                       
-                                     ImportExportTest.class.getResourceAsStream("../geocpm_db_v2.sql"))));
-        
+//        try
+//        {            
+//            STMT.executeUpdate("drop view geosuche;"); // removed as geometry column modification wouldn't be possible otherwise
+//            STMT.execute("SELECT DropGeometryColumn('public','geom','geo_field');");
+//            STMT.execute("SELECT AddGeometryColumn( 'public','geom','geo_field', -1, 'GEOMETRY', 2 );");
+//            
+//        }
+//        catch(final SQLException e)
+//        {
+//            e.printStackTrace();
+//            e.getNextException().printStackTrace();
+//            throw e;
+//        }
+//        
+//        final ScriptRunner runner = new ScriptRunner(CON, true, true);
+//        runner.runScript(new BufferedReader(
+//                                 new InputStreamReader(                       
+//                                     ImportExportTest.class.getResourceAsStream("../geocpm_db_v2.sql"))));
+//        
     }
 
-    @AfterClass @Ignore
+    @AfterClass 
     public static void tearDownClass() throws Exception 
     {
         STMT.close();
         CON.close();
         
-        if (! Boolean.valueOf(SERVICE.dropDatabase(TEST_DB_NAME))) 
-        {
-            throw new IllegalStateException("could not drop test db");
-        }
+//        if (! Boolean.valueOf(SERVICE.dropDatabase(TEST_DB_NAME))) 
+//        {
+//            throw new IllegalStateException("could not drop test db");
+//        }
     }
     
     @Before @Ignore
@@ -193,5 +200,103 @@ public class ImportExportTest
             // For now, we ignore it in our tests
             assertEquals(inData.get(i).trim(), outData.get(i).trim());
         }
+    }
+    
+    
+    
+    private void testDyna(final Rainevent rainEvent, final String referenceFile) throws Exception
+    {
+        this.exporter = new GeoCPMExport(1, this.testOutFile, DB_USER, DB_PWD, CON.getMetaData().getURL());
+        this.exporter.generateDYNA(rainEvent);
+        
+        final String parent   = this.testOutFile.getParent();
+        final File   exported = new File(parent, GeoCPMExport.DYNA_FILE);
+        
+        exported.deleteOnExit();
+        
+        
+        final List<String> exportedData  = IOUtils.readLines(ImportExportTest.class.getResourceAsStream(referenceFile));
+        final List<String> referenceData = IOUtils.readLines(new FileInputStream(exported));
+    
+        assertEquals("Number of DYNA records is different", exportedData.size(), referenceData.size());
+        
+        final int size = referenceData.size();
+        for(int i = 0; i < size; i++)
+        {
+            // Sometimes, there is a field delimiter at the end of a record in in the INPUT file.
+            // For now, we ignore it in our tests
+            assertEquals(exportedData.get(i).trim(), referenceData.get(i).trim());
+        }
+        
+        exported.delete();
+    }
+    
+    @Test
+    public void testDynaExport() throws Exception
+    {
+         
+        final ArrayList<Double> precipitations = new ArrayList<Double>(12);
+        precipitations.add(3.00);
+        precipitations.add(3.00);
+        precipitations.add(3.00);
+        precipitations.add(13.00);
+        precipitations.add(13.00);
+        precipitations.add(13.00);
+        precipitations.add(13.00);
+        precipitations.add(13.00);
+        precipitations.add(40.00);
+        precipitations.add(20.00);
+        precipitations.add(20.00);
+        precipitations.add(15.00);
+        precipitations.add(0.00);
+        precipitations.add(0.00);
+        precipitations.add(3.00);
+        precipitations.add(3.00);
+        precipitations.add(3.00);
+
+        
+        final Rainevent rainEvent = new Rainevent(300, precipitations);
+        
+        this.testDyna(rainEvent, "DYNA.testDynaExport");
+    }
+    
+    @Test
+    public void testDynaTooLargeFieldValues() throws Exception
+    {
+         
+        final ArrayList<Double> precipitations = new ArrayList<Double>(12);
+        precipitations.add(1234567.89);
+        precipitations.add(12345671.89);
+        
+        final Rainevent rainEvent = new Rainevent(300, precipitations);
+        this.testDyna(rainEvent, "DYNA.testDynaTooLargeFieldValues");
+    }
+    
+    @Test(expected=Exception.class)
+    public void testDynaTooManyRecords() throws Exception
+    {
+         
+        final ArrayList<Double> precipitations = new ArrayList<Double>(1000);
+        for(int i = 0; i < 99; i++)
+        {
+            precipitations.add(3.00);
+            precipitations.add(3.00);
+            precipitations.add(3.00);
+            precipitations.add(13.00);
+            precipitations.add(13.00);
+            precipitations.add(13.00);
+            precipitations.add(13.00);
+            precipitations.add(13.00);
+            precipitations.add(40.00);
+            precipitations.add(20.00);
+            precipitations.add(20.00);
+            precipitations.add(15.00); 
+        }
+
+        // that's the one which causes too many records
+        precipitations.add(1.00); 
+        
+        final Rainevent rainEvent = new Rainevent(300, precipitations);
+        this.testDyna(rainEvent, "DYNA.testDynaExport");
     }
 }

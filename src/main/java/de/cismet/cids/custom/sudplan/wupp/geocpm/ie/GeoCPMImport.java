@@ -7,18 +7,21 @@
 ****************************************************/
 package de.cismet.cids.custom.sudplan.wupp.geocpm.ie;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
-import java.io.FileReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
 import java.math.BigDecimal;
+
+import java.net.URL;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -34,6 +37,7 @@ import java.text.SimpleDateFormat;
 
 import java.util.Date;
 import java.util.TimeZone;
+import java.util.logging.Level;
 
 /**
  * This is a rather dirty implementation of a GeoCPM.ein (GeoCPM interface description v0.5 (5th October 2011)) file
@@ -84,6 +88,8 @@ public class GeoCPMImport {
 
     public static final String NULL_TOKEN_FILE = "-1\\.#R";
     public static final String NULL_TOKEN_DB = "NULL";
+
+    public static final String DYNA_FORM = "DYNA_form.ein";
 
     //~ Instance fields --------------------------------------------------------
 
@@ -150,22 +156,33 @@ public class GeoCPMImport {
 //
 //        System.out.println(importer.doImport());
 
-        final BufferedReader br = new BufferedReader(new FileReader("/Users/mscholl/Desktop/bk_connect_test"));
-        String line;
-        StringBuilder sb = new StringBuilder();
-        final GeoCPMImport gi = new GeoCPMImport(new ByteArrayInputStream(new byte[] {}), null, null, null);
-        int count = 0;
-        while ((line = br.readLine()) != null) {
-            gi.readBKConnect(sb, 1, line);
-            if ((++count % 10000) == 0) {
-                sb = new StringBuilder();
-            }
-        }
+//        final BufferedReader br = new BufferedReader(new FileReader("/Users/mscholl/Desktop/bk_connect_test"));
+//        String line;
+//        StringBuilder sb = new StringBuilder();
+//        final GeoCPMImport gi = new GeoCPMImport(new ByteArrayInputStream(new byte[] {}), null, null, null);
+//        int count = 0;
+//        while ((line = br.readLine()) != null) {
+//            gi.readBKConnect(sb, 1, line);
+//            if ((++count % 10000) == 0) {
+//                sb = new StringBuilder();
+//            }
+//        }
+//
+//        System.out.println("____");
+//        System.out.println("----");
+//
+//        System.out.println(sb.toString());
 
-        System.out.println("____");
-        System.out.println("----");
+        System.out.println("URL: " + GeoCPMImport.class.getResource(DYNA_FORM));
 
-        System.out.println(sb.toString());
+        final String test = "Ett' läuft";
+
+        final String base64String = new String(Base64.encodeBase64(test.getBytes()));
+        final String decoded = new String(Base64.decodeBase64(base64String.getBytes()));
+
+        System.out.println("base64 encoded: " + base64String);
+        System.out.println("base64 decoded: " + decoded);
+
 //        final String[] split = sb.toString().split(";");
 //
 //        Class.forName("org.postgresql.Driver"); // NOI18N
@@ -307,6 +324,9 @@ public class GeoCPMImport {
 
             LOG.info("post processing BKConnect"); // NOI18N
             postProcessBKConnect(batchSQL, configId);
+
+            LOG.info("Importing DYNA form");
+            this.importDynaForm(batchSQL, configId);
 
             LOG.info("processing remaining statements"); // NOI18N
             insertBatch(batchSQL, con);
@@ -812,7 +832,7 @@ public class GeoCPMImport {
         batchSQL.append(geomInsert);
 
         batchSQL.append("UPDATE geocpm_breaking_edge SET geom = (SELECT currval('geom_seq')) WHERE index = ") // NOI18N
-        .append(split[0]).append(" AND geocpm_configuration_id = ").append(configId).append(";");           // NOI18N
+        .append(split[0]).append(" AND geocpm_configuration_id = ").append(configId).append(";");             // NOI18N
     }
 
     /**
@@ -834,6 +854,54 @@ public class GeoCPMImport {
                 .append(" AND geocpm_breaking_edge.geocpm_configuration_id = tmp_bk_triangle_table.configuration_id")
                 .append(" AND geocpm_triangle.index = tmp_bk_triangle_table.triangle_index")
                 .append(" AND geocpm_triangle.geocpm_configuration_id = tmp_bk_triangle_table.configuration_id;");
+    }
+
+    /**
+     * Imports Base64-encoded form of a corresponding DYNA.ein file to configuration record.
+     *
+     * @param   batchSQL  DOCUMENT ME!
+     * @param   configId  DOCUMENT ME!
+     *
+     * @throws  NullPointerException  Exception
+     * @throws  RuntimeException      DOCUMENT ME!
+     */
+    private void importDynaForm(final StringBuilder batchSQL, final int configId) {
+        final URL url = this.getClass().getResource(DYNA_FORM);
+        if (url == null) {
+            throw new NullPointerException("Couldn't find DYNA form file " + DYNA_FORM + " in classpath");
+        }
+
+        FileInputStream fin = null;
+        try {
+            final File file = new File(url.toURI());
+            final byte[] formData = new byte[(int)file.length()];
+
+            fin = new FileInputStream(file);
+
+            if (fin.read(formData) == -1) {
+                throw new IllegalStateException("Reading from file with url: " + url + " returned -1");
+            }
+
+            final String base64String = new String(Base64.encodeBase64(formData));
+
+            batchSQL.append("UPDATE geocpm_configuration SET dyna_form=\'")
+                    .append(base64String)
+                    .append('\'')
+                    .append(" WHERE id=")
+                    .append(configId);
+        } catch (final Exception e) {
+            LOG.error("An error occurred while importing DYNA form " + DYNA_FORM, e);
+            throw new RuntimeException(e);
+        } finally {
+            if (fin != null) {
+                try {
+                    fin.close();
+                } catch (final IOException ex) {
+                    LOG.error("An error occurred while closing FileInputStream", ex);
+                    throw new RuntimeException(ex);
+                }
+            }
+        }
     }
 
     //~ Inner Classes ----------------------------------------------------------

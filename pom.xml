@@ -27,7 +27,17 @@
     <description>Importer and Exporter for the local models of Wuppertal</description>
 
     <dependencies>
-          <dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.4</version>
+        </dependency>
+         <dependency>
+            <groupId>de.cismet.cids.custom.sudplan</groupId>
+            <artifactId>geocpm-rest</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>it.geosolutions</groupId>
             <artifactId>geoserver-manager</artifactId>
             <version>1.3.0</version>
