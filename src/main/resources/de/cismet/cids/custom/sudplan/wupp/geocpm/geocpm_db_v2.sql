@@ -37,6 +37,10 @@ CREATE TABLE geocpm_configuration (
     q_out INTEGER,
     geom INTEGER,
     dyna_form TEXT,
+    geocpmi_d TEXT,
+    geocpmf_d TEXT,
+    geocpms_d TEXT,
+
 
     FOREIGN KEY (geom) REFERENCES geom
 );

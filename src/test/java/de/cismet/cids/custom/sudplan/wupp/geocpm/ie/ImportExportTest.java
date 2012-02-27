@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.sql.Connection;
 import de.cismet.tools.ScriptRunner;
 import java.io.BufferedInputStream;
+import java.io.InputStream;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -32,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.zip.GZIPInputStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -74,6 +76,10 @@ public class ImportExportTest
     private static final String TEST_INPUT_FILE  = "GeoCPM_test.ein.gz";
     private static final String TEST_OUTPUT_FILE = "GeoCPM_test_out.ein";
     
+    private static final String GEOCPMF_D = "GEOCPMF.D";
+    private static final String GEOCPMI_D = "GEOCPMI.D";
+    private static final String GEOCPMS_D = "GEOCPMS.D";
+    
     private static final String DB_USER   = "postgres";
     private static final String DB_PWD    = "cismetz12";
     
@@ -98,36 +104,36 @@ public class ImportExportTest
         org.apache.log4j.PropertyConfigurator.configure(p);
 
         
-//        SERVICE.dropDatabase(TEST_DB_NAME);
+        SERVICE.dropDatabase(TEST_DB_NAME);
         
         
-//        if (! Boolean.valueOf(SERVICE.initCidsSystem(TEST_DB_NAME))) 
-//        {
-//            throw new IllegalStateException("cannot initilise test db");
-//        }
+        if (! Boolean.valueOf(SERVICE.initCidsSystem(TEST_DB_NAME))) 
+        {
+            throw new IllegalStateException("cannot initilise test db");
+        }
         
         CON  = SERVICE.getConnection(TEST_DB_NAME);
         STMT = CON.createStatement();    
 
-//        try
-//        {            
-//            STMT.executeUpdate("drop view geosuche;"); // removed as geometry column modification wouldn't be possible otherwise
-//            STMT.execute("SELECT DropGeometryColumn('public','geom','geo_field');");
-//            STMT.execute("SELECT AddGeometryColumn( 'public','geom','geo_field', -1, 'GEOMETRY', 2 );");
-//            
-//        }
-//        catch(final SQLException e)
-//        {
-//            e.printStackTrace();
-//            e.getNextException().printStackTrace();
-//            throw e;
-//        }
-//        
-//        final ScriptRunner runner = new ScriptRunner(CON, true, true);
-//        runner.runScript(new BufferedReader(
-//                                 new InputStreamReader(                       
-//                                     ImportExportTest.class.getResourceAsStream("../geocpm_db_v2.sql"))));
-//        
+        try
+        {            
+            STMT.executeUpdate("drop view geosuche;"); // removed as geometry column modification wouldn't be possible otherwise
+            STMT.execute("SELECT DropGeometryColumn('public','geom','geo_field');");
+            STMT.execute("SELECT AddGeometryColumn( 'public','geom','geo_field', -1, 'GEOMETRY', 2 );");
+            
+        }
+        catch(final SQLException e)
+        {
+            e.printStackTrace();
+            e.getNextException().printStackTrace();
+            throw e;
+        }
+        
+        final ScriptRunner runner = new ScriptRunner(CON, true, true);
+        runner.runScript(new BufferedReader(
+                                 new InputStreamReader(                       
+                                     ImportExportTest.class.getResourceAsStream("../geocpm_db_v2.sql"))));
+        
     }
 
     @AfterClass 
@@ -136,22 +142,31 @@ public class ImportExportTest
         STMT.close();
         CON.close();
         
-//        if (! Boolean.valueOf(SERVICE.dropDatabase(TEST_DB_NAME))) 
-//        {
-//            throw new IllegalStateException("could not drop test db");
-//        }
+        if (! Boolean.valueOf(SERVICE.dropDatabase(TEST_DB_NAME))) 
+        {
+            throw new IllegalStateException("could not drop test db");
+        }
     }
     
-    @Before @Ignore
+    @Before 
     public void setUp() throws Exception
     {
         this.testOutFile = new File(TEST_OUTPUT_FILE);
     }
     
-    @After @Ignore
+    @After
     public void tearDown() throws Exception
     {
         this.testOutFile.delete();
+        
+        final File geocpmFDOut = new File(GEOCPMF_D);
+        final File geocpmIDOut = new File(GEOCPMI_D);
+        final File geocpmSDOut = new File(GEOCPMS_D);
+        
+        geocpmFDOut.delete();
+        geocpmIDOut.delete();
+        geocpmSDOut.delete();
+        
     }
     
     private int getNewestConfigId() throws Exception
@@ -179,16 +194,50 @@ public class ImportExportTest
         final String dbURL =  CON.getMetaData().getURL();
        
         GZIPInputStream gin = new GZIPInputStream(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE));
-        BufferedInputStream bin = new BufferedInputStream(gin);
-        this.importer = new GeoCPMImport(bin, DB_USER, DB_PWD, dbURL);
+        BufferedInputStream geocpmEin = new BufferedInputStream(gin);
+        
+        final InputStream geocpmFD = ImportExportTest.class.getResourceAsStream(GEOCPMF_D);
+        final InputStream geocpmSD = ImportExportTest.class.getResourceAsStream(GEOCPMS_D);
+        final InputStream geocpmID = ImportExportTest.class.getResourceAsStream(GEOCPMI_D);
+        
+        
+        this.importer = new GeoCPMImport(geocpmEin,
+                                         geocpmID,
+                                         geocpmFD,
+                                         geocpmSD, 
+                                         DB_USER, 
+                                         DB_PWD, 
+                                         dbURL);
         this.importer.doImport();
         
         this.exporter = new GeoCPMExport(this.getNewestConfigId(), this.testOutFile, DB_USER, DB_PWD, dbURL);
         this.exporter.doExport();
-    
-        gin = new GZIPInputStream(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE));
-        bin = new BufferedInputStream(gin);
-        final List<String> inData  = IOUtils.readLines(bin);
+        
+
+        //--- compare binary files
+        final File geocpmFDOut = new File(GEOCPMF_D);
+        final File geocpmIDOut = new File(GEOCPMI_D);
+        final File geocpmSDOut = new File(GEOCPMS_D);
+        geocpmFDOut.deleteOnExit();
+        geocpmIDOut.deleteOnExit();
+        geocpmSDOut.deleteOnExit();
+        
+        
+        final File geocpmFDIn  = new File(ImportExportTest.class.getResource(GEOCPMF_D).toURI());
+        assertTrue(FileUtils.contentEquals(geocpmFDIn, geocpmFDOut));
+        
+        final File geocpmIDIn  = new File(ImportExportTest.class.getResource(GEOCPMI_D).toURI());
+        assertTrue(FileUtils.contentEquals(geocpmIDIn, geocpmIDOut));
+        
+        final File geocpmSDIn  = new File(ImportExportTest.class.getResource(GEOCPMS_D).toURI());
+        assertTrue(FileUtils.contentEquals(geocpmSDIn, geocpmSDOut));        
+ 
+        
+        
+        //--- compare text file content
+        gin       = new GZIPInputStream(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE));
+        geocpmEin = new BufferedInputStream(gin);
+        final List<String> inData  = IOUtils.readLines(geocpmEin);
         final List<String> outData = IOUtils.readLines(new FileInputStream(this.testOutFile));
     
         assertEquals("Number of import and export data is different", inData.size(), outData.size());
@@ -231,7 +280,7 @@ public class ImportExportTest
         exported.delete();
     }
     
-    @Test
+    @Test  @Ignore
     public void testDynaExport() throws Exception
     {
          
@@ -260,7 +309,7 @@ public class ImportExportTest
         this.testDyna(rainEvent, "DYNA.testDynaExport");
     }
     
-    @Test
+    @Test   @Ignore
     public void testDynaTooLargeFieldValues() throws Exception
     {
          
@@ -272,12 +321,12 @@ public class ImportExportTest
         this.testDyna(rainEvent, "DYNA.testDynaTooLargeFieldValues");
     }
     
-    @Test(expected=Exception.class)
+    @Test(expected=Exception.class) @Ignore
     public void testDynaTooManyRecords() throws Exception
     {
          
         final ArrayList<Double> precipitations = new ArrayList<Double>(1000);
-        for(int i = 0; i < 99; i++)
+        for(int i = 0; i < 999; i++)
         {
             precipitations.add(3.00);
             precipitations.add(3.00);

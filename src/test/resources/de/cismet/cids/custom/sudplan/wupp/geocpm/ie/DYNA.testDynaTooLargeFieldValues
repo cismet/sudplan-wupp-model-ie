@@ -233,7 +233,7 @@
 ### Euler2_Modellregen D=60min T=100a
 ##  Nr DNr Zeitint  Zeitstufe Regenspenden f黵 Stufe 1-12, 13-24, usw.
 ##  北 膊 北北北北北膊膊膊膊膊北北北北北膊膊膊膊膊北北北北北膊膊膊膊膊北北北北北膊膊膊膊膊北北北北北膊膊膊膊膊北北北北北膊膊膊膊膊北北北北北膊膊膊膊膊
-07   1  1        5.0          1234567.89
+07   1   1       5.0          1234567.89
 ++STRA;INIT;
 ## Strassen
 ##

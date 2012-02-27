@@ -15,7 +15,6 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 
 import java.math.BigDecimal;
 
@@ -106,7 +105,11 @@ public class GeoCPMExport {
     // preallocate space for 10 records
     private static final int DYNA_ALL_RECORDS_INIT_SIZE = 1510;
     private static final int DYNA_RECORD_SIZE = 150;
+
     public static final String DYNA_FILE = "DYNA.EIN";
+    public static final String GEOCPMF_FILE = "GEOCPMF.D";
+    public static final String GEOCPMI_FILE = "GEOCPMI.D";
+    public static final String GEOCPMS_FILE = "GEOCPMS.D";
 
     private static final String DYNA_ENC = "ISO-8859-1";
 
@@ -243,6 +246,7 @@ public class GeoCPMExport {
 
         final FileOutputStream fout = new FileOutputStream(metaDataFile);
         prop.store(fout, "");
+        fout.close();
 
         LOG.info("Export meta data has been created successfully");
     }
@@ -856,7 +860,7 @@ public class GeoCPMExport {
     }
 
     /**
-     * DOCUMENT ME!
+     * Generates DYNA.EIN file (according to kpphydra.chm from 10.09.2009) with the form imported with GeoCPMImporter.
      *
      * @param   rainEvent  DOCUMENT ME!
      *
@@ -876,10 +880,15 @@ public class GeoCPMExport {
             stmt = con.createStatement();
 
             // obtain base64-encoded dyna representation from configuration
-            final ResultSet result = stmt.executeQuery(" SELECT dyna_form "
+            final ResultSet result = stmt.executeQuery(" SELECT dyna_form, geocpmi_d, geocpmf_d, geocpms_d "
                             + " FROM geocpm_configuration "
                             + " WHERE id =" + this.configId);
             result.next();
+
+            // write out binaries
+            this.writeBinaryFile(result.getString(2), GEOCPMI_FILE);
+            this.writeBinaryFile(result.getString(3), GEOCPMF_FILE);
+            this.writeBinaryFile(result.getString(4), GEOCPMS_FILE);
 
             final String base64Encoding = result.getString(1);
             final String dynaForm = new String(Base64.decodeBase64(base64Encoding.getBytes()), DYNA_ENC);
@@ -900,16 +909,14 @@ public class GeoCPMExport {
             final String intervalString = DCF1.format(interval);
 
             // create header of first data record
-            rainDataRecord.append("07")                      // Col. 1 - 2 Datenart
-            .append(' ')                                     // Col. 3
+            rainDataRecord.append("07")                      // Col.  1 - 2  type of data
+            .append("   ")
+                    .append(1)                               // Col.  3 - 6  rain number (1 - 9999)
+            .append(' ')                                     // Col.  7      [space]
             .append("  ")
-                    .append(1)                               // Col. 4 - 6 Nummer des Modellregens (1 -99)
-            .append(' ')                                     // Col. 7
-            .append(' ')
-                    .append(recordNo)                        // Col. 8 - 9 Datensatznummer
-            .append(' ')                                     // Col. 10
-            .append(this.fillWithBlanks(intervalString, 10)) // Col. 11 - 20
-            .append("          ");                           // Col. 21 - 30
+                    .append(recordNo)                        // Col.  8 - 10 record number
+            .append(this.fillWithBlanks(intervalString, 10)) // Col. 11 - 20 time intervall
+            .append("          ");                           // Col. 21 - 30 [space]
 
             // process precipitation data
             final List<Double> precipitations = rainEvent.getPrecipitations();
@@ -929,9 +936,9 @@ public class GeoCPMExport {
                 } else // maximal record length exceeded: create new sub-record, if possible
                 {
                     // if there are more than the maximally allowed number of records, abort export.
-                    if (recordNo == 99) {
-                        LOG.error("Maximal number of records (99) is exceeded -> Export is aborted");
-                        throw new RuntimeException("Maximal number of records (99) is exceeded -> Export is aborted");
+                    if (recordNo == 999) {
+                        LOG.error("Maximal number of records (1000) is exceeded -> Export is aborted");
+                        throw new RuntimeException("Maximal number of records (1000) is exceeded -> Export is aborted");
                     } else {
                         // append recent record to StringBuilder for final output
                         allRecords.append(rainDataRecord).append('\n');
@@ -941,15 +948,12 @@ public class GeoCPMExport {
                         recordNo++;
 
                         // set-up initial sub-record header
-                        rainDataRecord.append("07")                      // Col. 1 - 2 Datenart
-                        .append(' ')                                     // Col. 3
-                        .append("  ").append(1)                          // Col. 4 - 6 Nummer des Modellregens (1 -99)
-                        .append(' ')                                     // Col. 7
-                        .append(' ').append(recordNo)                    // Col. 8 - 9 Datensatznummer
-                        .append(' ')                                     // Col. 10
-                        .append("          ")                            // Col. 11 - 20
-                        .append("          ")                            // Col. 21 - 30
-                        .append(this.fillWithBlanks(precipitation, 10)); // precipation value
+                        rainDataRecord.append("07")                               // Col.  1 - 2  type of data
+                        .append("   ").append(1)                                  // Col.  3 - 6  rain number (1 - 9999)
+                        .append(' ')                                              // Col.  7      [space]
+                        .append(this.fillWithBlanks(String.valueOf(recordNo), 3)) // Col.  8 - 10 record number (0 -999)
+                        .append("                    ")                           // Col. 11 - 30 [space]
+                        .append(this.fillWithBlanks(precipitation, 10));          // Col. 31 - 150 precipation value
                     }
                 }
             }
@@ -987,6 +991,23 @@ public class GeoCPMExport {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   base64Encoding  DOCUMENT ME!
+     * @param   fileName        DOCUMENT ME!
+     *
+     * @throws  Exception  DOCUMENT ME!
+     */
+    private void writeBinaryFile(final String base64Encoding, final String fileName) throws Exception {
+        final String parentFolder = this.outFile.getParent();
+        final File outFile = new File(parentFolder, fileName);
+
+        final FileOutputStream fout = new FileOutputStream(outFile);
+        fout.write(Base64.decodeBase64(base64Encoding.getBytes()));
+        fout.close();
     }
 
     /**

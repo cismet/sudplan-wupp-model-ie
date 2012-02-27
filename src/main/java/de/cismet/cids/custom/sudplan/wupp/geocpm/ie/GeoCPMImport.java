@@ -12,6 +12,8 @@ import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
@@ -107,25 +109,41 @@ public class GeoCPMImport {
     private final transient String password;
     private final transient String dbUrl;
 
+    private final transient InputStream geocpmID;
+    private final transient InputStream geocpmFD;
+    private final transient InputStream geocpmSD;
+
     //~ Constructors -----------------------------------------------------------
 
     /**
      * Creates a new GeoCPMImport object.
      *
-     * @param   input     DOCUMENT ME!
-     * @param   user      DOCUMENT ME!
-     * @param   password  DOCUMENT ME!
-     * @param   dbUrl     DOCUMENT ME!
+     * @param   geocpmEin  input DOCUMENT ME!
+     * @param   geocpmID   DOCUMENT ME!
+     * @param   geocpmFD   DOCUMENT ME!
+     * @param   geocpmSD   DOCUMENT ME!
+     * @param   user       DOCUMENT ME!
+     * @param   password   DOCUMENT ME!
+     * @param   dbUrl      DOCUMENT ME!
      *
      * @throws  ClassNotFoundException  DOCUMENT ME!
      */
-    public GeoCPMImport(final InputStream input, final String user, final String password, final String dbUrl)
-            throws ClassNotFoundException {
-        this.reader = new BufferedReader(new InputStreamReader(input));
+    public GeoCPMImport(final InputStream geocpmEin,
+            final InputStream geocpmID,
+            final InputStream geocpmFD,
+            final InputStream geocpmSD,
+            final String user,
+            final String password,
+            final String dbUrl) throws ClassNotFoundException {
+        this.reader = new BufferedReader(new InputStreamReader(geocpmEin));
 
         this.user = user;
         this.password = password;
         this.dbUrl = dbUrl;
+
+        this.geocpmFD = geocpmFD;
+        this.geocpmID = geocpmID;
+        this.geocpmSD = geocpmSD;
 
         Class.forName("org.postgresql.Driver"); // NOI18N
     }
@@ -857,6 +875,86 @@ public class GeoCPMImport {
     }
 
     /**
+     * DOCUMENT ME!
+     *
+     * @param   file  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  RuntimeException  DOCUMENT ME!
+     */
+    private String encodeFileToBase64(final File file) {
+        FileInputStream fin = null;
+        try {
+            final byte[] formData = new byte[(int)file.length()];
+
+            fin = new FileInputStream(file);
+
+            if (fin.read(formData) == -1) {
+                throw new IllegalStateException("Reading from file " + file + " returned -1");
+            }
+
+            return new String(Base64.encodeBase64(formData));
+        } catch (final Exception e) {
+            LOG.error("An error occurred while encoding file " + file + " to Base64 string", e);
+            throw new RuntimeException(e);
+        } finally {
+            if (fin != null) {
+                try {
+                    fin.close();
+                } catch (final IOException ex) {
+                    LOG.error("An error occurred while closing FileInputStream", ex);
+                    throw new RuntimeException(ex);
+                }
+            }
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   in  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  RuntimeException  DOCUMENT ME!
+     */
+    private String encodeStreamToBase64(final InputStream in) {
+        final ByteArrayOutputStream bout = new ByteArrayOutputStream(100 * 1024); // 100kb
+
+        try {
+            final byte[] buffer = new byte[1024]; // buffer of size 1kb
+            int numberOfReadBytes = -1;
+
+            while ((numberOfReadBytes = in.read(buffer)) != -1) {
+                bout.write(buffer, 0, numberOfReadBytes);
+            }
+            bout.close();
+
+            return new String(Base64.encodeBase64(bout.toByteArray()));
+        } catch (final Exception e) {
+            LOG.error("An error occurred while encoding InputStream to Base64 string", e);
+            throw new RuntimeException(e);
+        } finally {
+            try {
+                bout.close();
+            } catch (final Exception e) {
+                LOG.error("An error occurred while closing ByteArrayOutputStream", e);
+                throw new RuntimeException(e);
+            }
+
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (final IOException ex) {
+                    LOG.error("An error occurred while closing InputStream", ex);
+                    throw new RuntimeException(ex);
+                }
+            }
+        }
+    }
+
+    /**
      * Imports Base64-encoded form of a corresponding DYNA.ein file to configuration record.
      *
      * @param   batchSQL  DOCUMENT ME!
@@ -871,21 +969,30 @@ public class GeoCPMImport {
             throw new NullPointerException("Couldn't find DYNA form file " + DYNA_FORM + " in classpath");
         }
 
-        FileInputStream fin = null;
+        final FileInputStream fin = null;
         try {
-            final File file = new File(url.toURI());
-            final byte[] formData = new byte[(int)file.length()];
+            final File dynafile = new File(url.toURI());
 
-            fin = new FileInputStream(file);
+            final String dynaForm = this.encodeFileToBase64(dynafile);
+            final String geoID = this.encodeStreamToBase64(this.geocpmID);
+            final String geoFD = this.encodeStreamToBase64(this.geocpmFD);
+            final String geoSD = this.encodeStreamToBase64(this.geocpmSD);
 
-            if (fin.read(formData) == -1) {
-                throw new IllegalStateException("Reading from file with url: " + url + " returned -1");
-            }
-
-            final String base64String = new String(Base64.encodeBase64(formData));
-
-            batchSQL.append("UPDATE geocpm_configuration SET dyna_form=\'")
-                    .append(base64String)
+            batchSQL.append(" UPDATE geocpm_configuration SET ")
+                    .append(" dyna_form=\'")
+                    .append(dynaForm)
+                    .append('\'')
+                    .append(',')
+                    .append(" geocpmi_d=\'")
+                    .append(geoID)
+                    .append('\'')
+                    .append(',')
+                    .append(" geocpmf_d=\'")
+                    .append(geoFD)
+                    .append('\'')
+                    .append(',')
+                    .append(" geocpms_d=\'")
+                    .append(geoSD)
                     .append('\'')
                     .append(" WHERE id=")
                     .append(configId);
