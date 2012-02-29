@@ -21,10 +21,51 @@
       <url>http://maven.geo-solutions.it/</url>
     </repository>
   </repositories>
+    <build>
+        <plugins>
 
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/main/assembly/dist.xml</descriptor>
+                    </descriptors>
+<!--                        <archive>
+                        <manifest>
+                          <addClasspath>true</addClasspath>
+                          <mainClass>de.cismet.cids.custom.sudplan.wupp.geocpm.ie.ExportApp</mainClass>
+                        </manifest>
+                      </archive>-->
+                </configuration>
+            </plugin>
+            
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                                        <archive>
+                        <manifest>
+                          <addClasspath>true</addClasspath>
+                          <mainClass>de.cismet.cids.custom.sudplan.wupp.geocpm.ie.ExportApp</mainClass>
+                        </manifest>
+                      </archive>
+                </configuration>
+            </plugin>
+            
+          </plugins>
+    </build>
 
     <name>Wuppertal Sudplan Model Import Export</name>
     <description>Importer and Exporter for the local models of Wuppertal</description>
+
+
+
+
+
+
+
+
+
+
 
     <dependencies>
         <dependency>

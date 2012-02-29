@@ -8,18 +8,22 @@
 package de.cismet.cids.custom.sudplan.wupp.geocpm.ie;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 
 import java.math.BigDecimal;
 
@@ -37,7 +41,9 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.TimeZone;
 import java.util.logging.Level;
 
@@ -91,7 +97,7 @@ public class GeoCPMImport {
     public static final String NULL_TOKEN_FILE = "-1\\.#R";
     public static final String NULL_TOKEN_DB = "NULL";
 
-    public static final String DYNA_FORM = "DYNA_form.ein";
+//    public static final String DYNA_FORM = "DYNA_form.ein";
 
     //~ Instance fields --------------------------------------------------------
 
@@ -112,6 +118,7 @@ public class GeoCPMImport {
     private final transient InputStream geocpmID;
     private final transient InputStream geocpmFD;
     private final transient InputStream geocpmSD;
+    private final transient InputStream dyna;
 
     //~ Constructors -----------------------------------------------------------
 
@@ -119,6 +126,7 @@ public class GeoCPMImport {
      * Creates a new GeoCPMImport object.
      *
      * @param   geocpmEin  input DOCUMENT ME!
+     * @param   dyna       DOCUMENT ME!
      * @param   geocpmID   DOCUMENT ME!
      * @param   geocpmFD   DOCUMENT ME!
      * @param   geocpmSD   DOCUMENT ME!
@@ -129,6 +137,7 @@ public class GeoCPMImport {
      * @throws  ClassNotFoundException  DOCUMENT ME!
      */
     public GeoCPMImport(final InputStream geocpmEin,
+            final InputStream dyna,
             final InputStream geocpmID,
             final InputStream geocpmFD,
             final InputStream geocpmSD,
@@ -141,6 +150,7 @@ public class GeoCPMImport {
         this.password = password;
         this.dbUrl = dbUrl;
 
+        this.dyna = dyna;
         this.geocpmFD = geocpmFD;
         this.geocpmID = geocpmID;
         this.geocpmSD = geocpmSD;
@@ -191,15 +201,15 @@ public class GeoCPMImport {
 //
 //        System.out.println(sb.toString());
 
-        System.out.println("URL: " + GeoCPMImport.class.getResource(DYNA_FORM));
-
-        final String test = "Ett' läuft";
-
-        final String base64String = new String(Base64.encodeBase64(test.getBytes()));
-        final String decoded = new String(Base64.decodeBase64(base64String.getBytes()));
-
-        System.out.println("base64 encoded: " + base64String);
-        System.out.println("base64 decoded: " + decoded);
+//        System.out.println("URL: " + GeoCPMImport.class.getResource(DYNA_FORM));
+//
+//        final String test = "Ett' läuft";
+//
+//        final String base64String = new String(Base64.encodeBase64(test.getBytes()));
+//        final String decoded = new String(Base64.decodeBase64(base64String.getBytes()));
+//
+//        System.out.println("base64 encoded: " + base64String);
+//        System.out.println("base64 decoded: " + decoded);
 
 //        final String[] split = sb.toString().split(";");
 //
@@ -960,20 +970,49 @@ public class GeoCPMImport {
      * @param   batchSQL  DOCUMENT ME!
      * @param   configId  DOCUMENT ME!
      *
-     * @throws  NullPointerException  Exception
-     * @throws  RuntimeException      DOCUMENT ME!
+     * @throws  RuntimeException  DOCUMENT ME!
      */
     private void importDynaForm(final StringBuilder batchSQL, final int configId) {
-        final URL url = this.getClass().getResource(DYNA_FORM);
-        if (url == null) {
-            throw new NullPointerException("Couldn't find DYNA form file " + DYNA_FORM + " in classpath");
-        }
-
-        final FileInputStream fin = null;
         try {
-            final File dynafile = new File(url.toURI());
+            // -- prepare dyna file for import
+            final List<String> originalDynaLines = IOUtils.readLines(this.dyna, GeoCPMExport.DYNA_ENC);
+            final int numLines = originalDynaLines.size();
 
-            final String dynaForm = this.encodeFileToBase64(dynafile);
+            final ByteArrayOutputStream bout = new ByteArrayOutputStream(500 * 1024); // preallocate 500kb
+//            final DataOutputStream dout = new DataOutputStream(bout);
+            final BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(bout, GeoCPMExport.DYNA_ENC));
+
+            String line;
+            for (int i = 0; i < numLines; i++) {
+                line = originalDynaLines.get(i);
+                if (line.startsWith("07")) {
+                    // put placeholder for new rain data generated from a Rainevent
+// dout.writeChars("{0}");
+                    writer.write("{0}");
+                    // NOTE: no linefeed after placeholder!
+
+                    do {
+                        // ignore all 07 data type records
+                        i++;
+                        line = originalDynaLines.get(i);
+                    } while (line.startsWith("07"));
+
+                    writer.write(line);
+                    writer.newLine();
+//                    dout.writeChars(line);
+//                    dout.writeChar('\n');
+                } else {
+                    writer.write(line);
+//                    dout.writeChars(line);
+                    if (i < (numLines - 1)) {
+//                        dout.writeChar('\n');
+                        writer.newLine();
+                    }
+                }
+            }
+            final String dynaForm = this.encodeStreamToBase64(new ByteArrayInputStream(bout.toByteArray()));
+
+            // prepare binary data for import
             final String geoID = this.encodeStreamToBase64(this.geocpmID);
             final String geoFD = this.encodeStreamToBase64(this.geocpmFD);
             final String geoSD = this.encodeStreamToBase64(this.geocpmSD);
@@ -997,17 +1036,8 @@ public class GeoCPMImport {
                     .append(" WHERE id=")
                     .append(configId);
         } catch (final Exception e) {
-            LOG.error("An error occurred while importing DYNA form " + DYNA_FORM, e);
+            LOG.error("An error occurred while importing DYNA form ", e);
             throw new RuntimeException(e);
-        } finally {
-            if (fin != null) {
-                try {
-                    fin.close();
-                } catch (final IOException ex) {
-                    LOG.error("An error occurred while closing FileInputStream", ex);
-                    throw new RuntimeException(ex);
-                }
-            }
         }
     }
 

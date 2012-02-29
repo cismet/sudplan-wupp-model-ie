@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    Document   : dist.xml
+    Created on : February 10, 2011, 3:39 PM
+    Author     : mscholl
+    Description:
+        Purpose of the document follows.
+-->
+
+<assembly>
+  <id>bin</id>
+  <formats>
+      <format>jar</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
+  <dependencySets>
+      <dependencySet>
+          <useTransitiveDependencies>true</useTransitiveDependencies>
+          <useProjectArtifact>true</useProjectArtifact>
+      </dependencySet>
+  </dependencySets>
+</assembly>

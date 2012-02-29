@@ -219,3 +219,61 @@ CREATE TABLE geocpm_aus_max
 
   PRIMARY KEY (geocpm_configuration_id, geocpm_triangle_id)
 );
+
+
+----------------------------------------------------------------
+------- DELTA
+----------------------------------------------------------------
+
+
+CREATE SEQUENCE delta_breaking_edge_seq
+  INCREMENT 1
+  MINVALUE 1
+  MAXVALUE 9223372036854775807
+  START 11
+  CACHE 1;
+
+CREATE SEQUENCE delta_configuration_delta_breaking_edge_seq
+  INCREMENT 1
+  MINVALUE 1
+  MAXVALUE 9223372036854775807
+  START 11
+  CACHE 1;
+
+
+CREATE SEQUENCE delta_configuration_seq
+  INCREMENT 1
+  MINVALUE 1
+  MAXVALUE 9223372036854775807
+  START 4
+  CACHE 1;
+
+
+CREATE TABLE delta_configuration
+(
+  description text,
+  locked boolean DEFAULT false,
+  name character varying(200),
+  id integer NOT NULL DEFAULT nextval('delta_configuration_seq'::regclass),
+  delta_breaking_edges integer,
+  original_object integer,
+  CONSTRAINT delta_configuration_pkey PRIMARY KEY (id )
+);
+
+CREATE TABLE delta_breaking_edge
+(
+  name character varying(200),
+  height numeric(14,2),
+  description text,
+  id integer NOT NULL DEFAULT nextval('delta_breaking_edge_seq'::regclass),
+  original_object integer,
+  CONSTRAINT delta_breaking_edge_pkey PRIMARY KEY (id )
+);
+
+CREATE TABLE delta_configuration_delta_breaking_edge
+(
+  id integer NOT NULL DEFAULT nextval('delta_configuration_delta_breaking_edge_seq'::regclass),
+  delta_configuration_reference integer,
+  delta_breaking_edge integer NOT NULL,
+  CONSTRAINT delta_configuration_delta_breaking_edge_pkey PRIMARY KEY (id )
+);

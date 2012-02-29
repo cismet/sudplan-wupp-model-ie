@@ -33,9 +33,15 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import de.cismet.cids.custom.sudplan.geocpmrest.io.Rainevent;
 
@@ -111,7 +117,7 @@ public class GeoCPMExport {
     public static final String GEOCPMI_FILE = "GEOCPMI.D";
     public static final String GEOCPMS_FILE = "GEOCPMS.D";
 
-    private static final String DYNA_ENC = "ISO-8859-1";
+    public static final String DYNA_ENC = "ISO-8859-1";
 
     //~ Instance fields --------------------------------------------------------
 
@@ -129,6 +135,9 @@ public class GeoCPMExport {
 
     // builder reused in method fillWithBlanks()
     private final transient StringBuilder fillBuilder;
+
+    private final Map<String, BigDecimal> bkDeltaMapping;
+    private final Map<String, BigDecimal[]> triangleDeltaMapping;
 
     //~ Constructors -----------------------------------------------------------
 
@@ -191,6 +200,9 @@ public class GeoCPMExport {
         this.dbUrl = dbUrl;
 
         this.fillBuilder = new StringBuilder(10);
+
+        this.bkDeltaMapping = new HashMap<String, BigDecimal>();
+        this.triangleDeltaMapping = new HashMap<String, BigDecimal[]>();
 
         Class.forName("org.postgresql.Driver"); // NOI18N
     }
@@ -430,9 +442,18 @@ public class GeoCPMExport {
                             || (result.getObject("be_height_c") == null);
 
                 if (!areHeightsNull) {
-                    beHeightA = result.getBigDecimal("be_height_a");
-                    beHeightB = result.getBigDecimal("be_height_b");
-                    beHeightC = result.getBigDecimal("be_height_c");
+                    final BigDecimal[] heightsItem = this.triangleDeltaMapping.get(index);
+                    if (heightsItem == null) // not a delta member
+                    {
+                        beHeightA = result.getBigDecimal("be_height_a");
+                        beHeightB = result.getBigDecimal("be_height_b");
+                        beHeightC = result.getBigDecimal("be_height_c");
+                    } else                   // there is a corresponding delta entry
+                    {
+                        beHeightA = heightsItem[0];
+                        beHeightB = heightsItem[1];
+                        beHeightC = heightsItem[2];
+                    }
                 }
 
                 tmpContent.append(index)
@@ -474,6 +495,8 @@ public class GeoCPMExport {
         } finally {
             result.close();
         }
+
+        this.triangleDeltaMapping.clear();
 
         LOG.info("TRIANGLES HAVE BEEN RETRIEVED SUCCESSFULLY");
     }
@@ -736,16 +759,28 @@ public class GeoCPMExport {
             final ArrayList<String> bkIds = new ArrayList<String>();
             final ArrayList<StringBuilder> halfRecs = new ArrayList<StringBuilder>();
 
+            BigDecimal deltaBKHeight;
+            String bkIndex;
+
             while (result.next()) {
                 bkIds.add(this.handleValue(result.getString(1))); // id
 
                 tmpContent = new StringBuilder(50);
 
-                tmpContent.append(result.getString(2)).append(FIELD_SEP);                             // index
-                tmpContent.append(result.getString(3)).append(FIELD_SEP);                             // type
-                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(4))).append(FIELD_SEP); // height
-                tmpContent.append(result.getString(5)).append(FIELD_SEP);                             // triangle_count_high
-                tmpContent.append(result.getString(6));                                               // triangle_count_low
+                bkIndex = result.getString(2);
+
+                tmpContent.append(bkIndex).append(FIELD_SEP);             // index
+                tmpContent.append(result.getString(3)).append(FIELD_SEP); // type
+
+                deltaBKHeight = this.bkDeltaMapping.get(bkIndex);
+                if (deltaBKHeight == null) {
+                    tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(4))).append(FIELD_SEP); // height
+                } else {
+                    tmpContent.append(this.handleValue(DCF2, deltaBKHeight)).append(FIELD_SEP);           // height
+                }
+
+                tmpContent.append(result.getString(5)).append(FIELD_SEP); // triangle_count_high
+                tmpContent.append(result.getString(6));                   // triangle_count_low
                 halfRecs.add(tmpContent);
             }
 
@@ -780,7 +815,192 @@ public class GeoCPMExport {
             }
         }
 
+        this.bkDeltaMapping.clear();
+
         LOG.info("BREAKING EDGES HAVE BEEN RETRIEVED SUCCESSFULLY");
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param  triangleHeights  DOCUMENT ME!
+     * @param  orientation      DOCUMENT ME!
+     * @param  bkHeightOld      DOCUMENT ME!
+     * @param  bkHeightNew      DOCUMENT ME!
+     */
+    private void updateHighTriangleHeights(final BigDecimal[] triangleHeights,
+            final char orientation,
+            final BigDecimal bkHeightOld,
+            final BigDecimal bkHeightNew) {
+        switch (orientation) {
+            case 'A': {
+                triangleHeights[0] = triangleHeights[0].subtract(bkHeightOld).add(bkHeightNew);
+                break;
+            }
+            case 'B': {
+                triangleHeights[1] = triangleHeights[1].subtract(bkHeightOld).add(bkHeightNew);
+                break;
+            }
+            case 'C': {
+                triangleHeights[2] = triangleHeights[2].subtract(bkHeightOld).add(bkHeightNew);
+                break;
+            }
+            case 'a': {
+                this.updateHighTriangleHeights(triangleHeights, 'B', bkHeightOld, bkHeightNew);
+                this.updateHighTriangleHeights(triangleHeights, 'C', bkHeightOld, bkHeightNew);
+                break;
+            }
+            case 'b': {
+                this.updateHighTriangleHeights(triangleHeights, 'A', bkHeightOld, bkHeightNew);
+                this.updateHighTriangleHeights(triangleHeights, 'C', bkHeightOld, bkHeightNew);
+                break;
+            }
+            case 'c': {
+                this.updateHighTriangleHeights(triangleHeights, 'A', bkHeightOld, bkHeightNew);
+                this.updateHighTriangleHeights(triangleHeights, 'B', bkHeightOld, bkHeightNew);
+                break;
+            }
+            default: {
+                LOG.warn("Unknown orientation '" + orientation + "' -> no triangle height changes applied");
+            }
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param  triangleHeights  DOCUMENT ME!
+     * @param  orientation      DOCUMENT ME!
+     * @param  bkHeightOld      DOCUMENT ME!
+     * @param  bkHeightNew      DOCUMENT ME!
+     */
+    private void updateLowTriangleHeights(final BigDecimal[] triangleHeights,
+            final char orientation,
+            final BigDecimal bkHeightOld,
+            final BigDecimal bkHeightNew) {
+        switch (orientation) {
+            case 'A': {
+                triangleHeights[0] = triangleHeights[0].add(bkHeightOld).subtract(bkHeightNew);
+                break;
+            }
+            case 'B': {
+                triangleHeights[1] = triangleHeights[1].add(bkHeightOld).subtract(bkHeightNew);
+                break;
+            }
+            case 'C': {
+                triangleHeights[2] = triangleHeights[2].add(bkHeightOld).subtract(bkHeightNew);
+                break;
+            }
+            case 'a': {
+                this.updateLowTriangleHeights(triangleHeights, 'B', bkHeightOld, bkHeightNew);
+                this.updateLowTriangleHeights(triangleHeights, 'C', bkHeightOld, bkHeightNew);
+                break;
+            }
+            case 'b': {
+                this.updateLowTriangleHeights(triangleHeights, 'A', bkHeightOld, bkHeightNew);
+                this.updateLowTriangleHeights(triangleHeights, 'C', bkHeightOld, bkHeightNew);
+                break;
+            }
+            case 'c': {
+                this.updateLowTriangleHeights(triangleHeights, 'A', bkHeightOld, bkHeightNew);
+                this.updateLowTriangleHeights(triangleHeights, 'B', bkHeightOld, bkHeightNew);
+                break;
+            }
+            default: {
+                LOG.warn("Unknown orientation '" + orientation + "' -> no triangle height changes applied");
+            }
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   stmt  DOCUMENT ME!
+     *
+     * @throws  RuntimeException  DOCUMENT ME!
+     */
+    private void prepareDeltaData(final Statement stmt) {
+        if (this.deltaConfigId == -1) {
+            return;
+        }
+
+        final ResultSet deltaBKResult;
+
+        ResultSet deltaTriangleResult;
+
+        try {
+            deltaBKResult = stmt.executeQuery(
+                    " select gb.id as bk_id, gb.index as bk_index, gb.height as bk_old_height, b.height as bk_new_height, gb.triangle_count_high "
+                            + " from delta_configuration_delta_breaking_edge r, delta_configuration c, delta_breaking_edge b, geocpm_breaking_edge gb "
+                            + " where c.original_object          = "
+                            + this.configId
+                            + " and   c.id                       = "
+                            + this.deltaConfigId
+                            + " and   c.id                       = r.delta_configuration_reference "
+                            + " and   b.id                       = r.delta_breaking_edge "
+                            + " and   b.original_object          = gb.id "
+                            + " and   gb.geocpm_configuration_id = "
+                            + this.configId);
+
+            while (deltaBKResult.next()) {
+                final String deltaBKId = deltaBKResult.getString("bk_id");
+
+                // mapping bk-index -> new bk height
+                // this mapping is accessed by retrieveBKs()
+                this.bkDeltaMapping.put(deltaBKResult.getString("bk_index"),
+                    deltaBKResult.getBigDecimal("bk_new_height"));
+
+                // TODO prepared stmt
+                // TODO better...
+                deltaTriangleResult = stmt.getConnection().createStatement()
+                            .executeQuery(
+                                    "select t.index as triangle_index, t.be_height_a as height_a, t.be_height_b as height_b, t.be_height_c as height_c, b.orientation"
+                                    + " from geocpm_jt_breaking_edge_triangle b, geocpm_triangle t"
+                                    + " where b.geocpm_breaking_edge_id = "
+                                    + deltaBKId
+                                    + " and   t.id = b.geocpm_triangle_id"
+                                    + " order by b.id");
+
+                final BigDecimal newBKHeight = deltaBKResult.getBigDecimal("bk_new_height");
+                final BigDecimal oldBKHeight = deltaBKResult.getBigDecimal("bk_old_height");
+                int highTriangleCount = deltaBKResult.getInt("triangle_count_high");
+
+                BigDecimal[] heightsItem;
+                String triangleIndex;
+                char orientation;
+
+                while (deltaTriangleResult.next()) {
+                    triangleIndex = deltaTriangleResult.getString("triangle_index");
+
+                    // TODO better
+                    orientation = deltaTriangleResult.getString("orientation").toCharArray()[0];
+
+                    heightsItem = this.triangleDeltaMapping.get(triangleIndex);
+                    if (heightsItem == null) {
+                        heightsItem = new BigDecimal[3];
+                        heightsItem[0] = deltaTriangleResult.getBigDecimal("height_a");
+                        heightsItem[1] = deltaTriangleResult.getBigDecimal("height_b");
+                        heightsItem[2] = deltaTriangleResult.getBigDecimal("height_c");
+
+                        // mapping triangle_index -> triangle_heights (A, B, C)
+                        // this mapping is accessed by retrieveTriangles()
+                        this.triangleDeltaMapping.put(triangleIndex, heightsItem);
+                    }
+
+                    // update triangle heights according to their orientation and order (high, low)
+                    // NOTE: assumption is that there is always at most 1 change on each triangle height column
+                    if (highTriangleCount > 0) {
+                        highTriangleCount--;
+                        this.updateHighTriangleHeights(heightsItem, orientation, oldBKHeight, newBKHeight);
+                    } else {
+                        this.updateLowTriangleHeights(heightsItem, orientation, oldBKHeight, newBKHeight);
+                    }
+                }
+            }
+        } catch (final Exception e) {
+            LOG.error(e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -800,8 +1020,21 @@ public class GeoCPMExport {
             con = DriverManager.getConnection(dbUrl, user, password);
             stmt = con.createStatement();
 
+            final Statement finalStmt = stmt;
+            final Thread deltaDataThread = new Thread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            prepareDeltaData(finalStmt);
+                        }
+                    });
+            deltaDataThread.start();
+
             this.retrieveConfigData(stmt);
             this.retrievePoints(stmt);
+
+            deltaDataThread.join();
+
             this.retrieveTriangles(stmt);
             this.retrieveCurves(stmt);
             this.retrieveSourceDrains(stmt);
@@ -902,11 +1135,8 @@ public class GeoCPMExport {
             // (instead of 0 which is specified in the DYNA v4 manual)
             int recordNo = 1;
 
-            // interval obtained by rain event is given in seconds,
-            // however DYNA needs it in minutes -> conversion:
-            double interval = rainEvent.getInterval();
-            interval /= 60.0;
-            final String intervalString = DCF1.format(interval);
+            // interval obtained by rain event is given in minutes,
+            final String intervalString = DCF1.format(rainEvent.getInterval());
 
             // create header of first data record
             rainDataRecord.append("07")                      // Col.  1 - 2  type of data
@@ -965,6 +1195,8 @@ public class GeoCPMExport {
 
             // dyna form retrieved from db contains placeholder which is compatible to MessageFormat
             // TODO remove empty string before final test run
+
+            System.out.println(dynaForm);
             final String finalOutput = MessageFormat.format(dynaForm, allRecords.toString());
 
             // create DYNA.EIN file in the same folder where the meta-data file is located
