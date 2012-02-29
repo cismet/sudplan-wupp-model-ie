@@ -1195,8 +1195,6 @@ public class GeoCPMExport {
 
             // dyna form retrieved from db contains placeholder which is compatible to MessageFormat
             // TODO remove empty string before final test run
-
-            System.out.println(dynaForm);
             final String finalOutput = MessageFormat.format(dynaForm, allRecords.toString());
 
             // create DYNA.EIN file in the same folder where the meta-data file is located
