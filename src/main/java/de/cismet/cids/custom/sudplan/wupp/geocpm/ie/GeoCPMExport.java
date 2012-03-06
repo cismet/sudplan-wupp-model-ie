@@ -107,6 +107,8 @@ public class GeoCPMExport {
 
     public static final String META_DATA_FILE_NAME = "geocpm_export_meta.properties";
     public static final String PROP_CONFIG_ID = "configuration_id";
+    public static final String PROP_GEOCPM_FOLDER = "geocpm_folder";
+    public static final String PROP_DYNA_FOLDER = "dyna_folder";
 
     // preallocate space for 10 records
     private static final int DYNA_ALL_RECORDS_INIT_SIZE = 1510;
@@ -123,7 +125,7 @@ public class GeoCPMExport {
 
     private final transient DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss"); // NOI18N
 
-    private final transient File outFile;
+    private final transient File outFolder;
     private final transient int configId;
     private final transient int deltaConfigId;
 
@@ -132,6 +134,9 @@ public class GeoCPMExport {
     private final transient String user;
     private final transient String password;
     private final transient String dbUrl;
+
+    private transient String geocpmEinFolder;
+    private transient String dynaEinFolder;
 
     // builder reused in method fillWithBlanks()
     private final transient StringBuilder fillBuilder;
@@ -144,27 +149,27 @@ public class GeoCPMExport {
     /**
      * Creates a new GeoCPMImport object.
      *
-     * @param   configId  input DOCUMENT ME!
-     * @param   outFile   DOCUMENT ME!
-     * @param   user      DOCUMENT ME!
-     * @param   password  DOCUMENT ME!
-     * @param   dbUrl     DOCUMENT ME!
+     * @param   configId   input DOCUMENT ME!
+     * @param   outFolder  DOCUMENT ME!
+     * @param   user       DOCUMENT ME!
+     * @param   password   DOCUMENT ME!
+     * @param   dbUrl      DOCUMENT ME!
      *
      * @throws  ClassNotFoundException  DOCUMENT ME!
      */
     public GeoCPMExport(final int configId,
-            final File outFile,
+            final File outFolder,
             final String user,
             final String password,
             final String dbUrl) throws ClassNotFoundException {
-        this(configId, -1, outFile, user, password, dbUrl);
+        this(configId, -1, outFolder, user, password, dbUrl);
     }
     /**
      * todo: delta config handling
      *
      * @param   configId       DOCUMENT ME!
      * @param   deltaConfigId  DOCUMENT ME!
-     * @param   outFile        DOCUMENT ME!
+     * @param   outFolder      DOCUMENT ME!
      * @param   user           DOCUMENT ME!
      * @param   password       DOCUMENT ME!
      * @param   dbUrl          DOCUMENT ME!
@@ -175,11 +180,11 @@ public class GeoCPMExport {
      */
     public GeoCPMExport(final int configId,
             final int deltaConfigId,
-            final File outFile,
+            final File outFolder,
             final String user,
             final String password,
             final String dbUrl) throws ClassNotFoundException {
-        if (outFile == null) {
+        if (outFolder == null) {
             throw new NullPointerException("Given output file must not be null");
         }
 
@@ -187,13 +192,17 @@ public class GeoCPMExport {
             throw new NullPointerException("At least one of the db params is null");
         }
 
-        if (outFile.exists()) {
-            throw new IllegalArgumentException("Given target file " + outFile + " does already exist");
+        if (!outFolder.exists()) {
+            throw new IllegalArgumentException("Given target FOLDER " + outFolder + " does not exist");
+        }
+
+        if (!outFolder.isDirectory()) {
+            throw new IllegalArgumentException("Given file " + outFolder + " is not a directory");
         }
 
         this.configId = configId;
         this.deltaConfigId = deltaConfigId;
-        this.outFile = outFile;
+        this.outFolder = outFolder;
         this.prepContent = new StringBuilder(30 * 1024 * 1024); // allocate 60 MB (1 char = 2 Byte)
         this.user = user;
         this.password = password;
@@ -252,9 +261,10 @@ public class GeoCPMExport {
         LOG.info("Start creation of export meta data...");
         final Properties prop = new Properties();
         prop.put(PROP_CONFIG_ID, String.valueOf(this.configId));
+        prop.put(PROP_GEOCPM_FOLDER, (this.geocpmEinFolder == null) ? "unknown" : this.geocpmEinFolder);
+        prop.put(PROP_DYNA_FOLDER, (this.dynaEinFolder == null) ? "unknown" : this.dynaEinFolder);
 
-        final String parentFolder = this.outFile.getParent();
-        final File metaDataFile = new File(parentFolder, META_DATA_FILE_NAME);
+        final File metaDataFile = new File(this.outFolder, META_DATA_FILE_NAME);
 
         final FileOutputStream fout = new FileOutputStream(metaDataFile);
         prop.store(fout, "");
@@ -295,6 +305,9 @@ public class GeoCPMExport {
             final String numberOfThreads = this.handleValue(result.getString("number_of_threads"));
             final String qIn = this.handleValue(result.getString("q_in"));
             final String qOut = this.handleValue(result.getString("q_out"));
+
+            this.geocpmEinFolder = this.handleValue(result.getString("geocpm_ein_folder"));
+            this.dynaEinFolder = this.handleValue(result.getString("dyna_ein_folder"));
 
             final char YES = 'y';
             final char NO = 'n';
@@ -1044,7 +1057,13 @@ public class GeoCPMExport {
             this.prepContent.append(SECTION_RAINCURVE).append(" 0").append(EOL).append(EOL);
             this.retrieveBKs(stmt);
 
-            final FileOutputStream fout = new FileOutputStream(this.outFile);
+            final File parentFolder = new File(this.outFolder, this.geocpmEinFolder);
+            if (!parentFolder.mkdir()) {
+                throw new RuntimeException("Could not create output folder " + parentFolder
+                            + " for exported GeoCPM.EIN");
+            }
+
+            final FileOutputStream fout = new FileOutputStream(new File(parentFolder, "GeoCPM.EIN"));
             final BufferedOutputStream bOut = new BufferedOutputStream(fout);
 
             bOut.write(this.prepContent.toString().getBytes());
@@ -1109,6 +1128,13 @@ public class GeoCPMExport {
         Statement stmt = null;
 
         try {
+            // create DYNA.EIN file in folder with the same name as the parent folder of the original DYNA.EIN file
+            final File parentFolder = new File(this.outFolder, this.dynaEinFolder);
+
+            if (!parentFolder.mkdir()) {
+                throw new RuntimeException("Could not create output folder " + parentFolder + " for DYNA file");
+            }
+
             con = DriverManager.getConnection(dbUrl, user, password);
             stmt = con.createStatement();
 
@@ -1197,8 +1223,6 @@ public class GeoCPMExport {
             // TODO remove empty string before final test run
             final String finalOutput = MessageFormat.format(dynaForm, allRecords.toString());
 
-            // create DYNA.EIN file in the same folder where the meta-data file is located
-            final String parentFolder = this.outFile.getParent();
             final File dynaFile = new File(parentFolder, DYNA_FILE);
 
             final FileOutputStream fout = new FileOutputStream(dynaFile);
@@ -1229,10 +1253,14 @@ public class GeoCPMExport {
      * @param   base64Encoding  DOCUMENT ME!
      * @param   fileName        DOCUMENT ME!
      *
-     * @throws  Exception  DOCUMENT ME!
+     * @throws  Exception         DOCUMENT ME!
+     * @throws  RuntimeException  DOCUMENT ME!
      */
     private void writeBinaryFile(final String base64Encoding, final String fileName) throws Exception {
-        final String parentFolder = this.outFile.getParent();
+        final File parentFolder = new File(this.outFolder, this.dynaEinFolder);
+        if (!parentFolder.exists()) {
+            throw new RuntimeException("Folder " + parentFolder + " for DYNA binary files location does not exist");
+        }
         final File outFile = new File(parentFolder, fileName);
 
         final FileOutputStream fout = new FileOutputStream(outFile);

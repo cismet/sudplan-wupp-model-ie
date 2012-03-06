@@ -91,8 +91,6 @@ public class GeoCPMImport {
     public static final String NULL_TOKEN_FILE = "-1\\.#R";
     public static final String NULL_TOKEN_DB = "NULL";
 
-//    public static final String DYNA_FORM = "DYNA_form.ein";
-
     //~ Instance fields --------------------------------------------------------
 
     /**
@@ -114,19 +112,24 @@ public class GeoCPMImport {
     private final transient InputStream geocpmSD;
     private final transient InputStream dyna;
 
+    private final transient String geocpmFolder;
+    private final transient String dynaFolder;
+
     //~ Constructors -----------------------------------------------------------
 
     /**
      * Creates a new GeoCPMImport object.
      *
-     * @param   geocpmEin  input DOCUMENT ME!
-     * @param   dyna       DOCUMENT ME!
-     * @param   geocpmID   DOCUMENT ME!
-     * @param   geocpmFD   DOCUMENT ME!
-     * @param   geocpmSD   DOCUMENT ME!
-     * @param   user       DOCUMENT ME!
-     * @param   password   DOCUMENT ME!
-     * @param   dbUrl      DOCUMENT ME!
+     * @param   geocpmEin     input DOCUMENT ME!
+     * @param   dyna          DOCUMENT ME!
+     * @param   geocpmID      DOCUMENT ME!
+     * @param   geocpmFD      DOCUMENT ME!
+     * @param   geocpmSD      DOCUMENT ME!
+     * @param   geocpmFolder  DOCUMENT ME!
+     * @param   dynaFolder    DOCUMENT ME!
+     * @param   user          DOCUMENT ME!
+     * @param   password      DOCUMENT ME!
+     * @param   dbUrl         DOCUMENT ME!
      *
      * @throws  ClassNotFoundException  DOCUMENT ME!
      */
@@ -135,6 +138,8 @@ public class GeoCPMImport {
             final InputStream geocpmID,
             final InputStream geocpmFD,
             final InputStream geocpmSD,
+            final String geocpmFolder,
+            final String dynaFolder,
             final String user,
             final String password,
             final String dbUrl) throws ClassNotFoundException {
@@ -148,6 +153,9 @@ public class GeoCPMImport {
         this.geocpmFD = geocpmFD;
         this.geocpmID = geocpmID;
         this.geocpmSD = geocpmSD;
+
+        this.geocpmFolder = geocpmFolder;
+        this.dynaFolder = dynaFolder;
 
         Class.forName("org.postgresql.Driver"); // NOI18N
     }
@@ -580,7 +588,8 @@ public class GeoCPMImport {
                 "INSERT INTO geocpm_configuration (calc_begin, calc_end, write_node, "                         // NOI18N
                         + "write_edge, last_values, save_marked, merge_triangles, min_calc_triangle_size, "    // NOI18N
                         + "time_step_restriction, save_velocity_curves, save_flow_curves, result_save_limit, " // NOI18N
-                        + "number_of_threads, q_in, q_out) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                        + "number_of_threads, q_in, q_out, geocpm_ein_folder, dyna_ein_folder) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
                 Statement.RETURN_GENERATED_KEYS);                                                              // NOI18N
         try {
             p.setTimestamp(1, cs.calcBegin);
@@ -598,6 +607,8 @@ public class GeoCPMImport {
             p.setInt(13, cs.numberOfThreads);
             p.setInt(14, cs.qIn);
             p.setInt(15, cs.qOut);
+            p.setString(16, this.geocpmFolder);
+            p.setString(17, this.dynaFolder);
 
             p.executeUpdate();
 

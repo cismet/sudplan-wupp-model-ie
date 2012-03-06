@@ -79,6 +79,12 @@ public final class GeoCPMAusImport {
 
     private static final String VIEW_NAME_BASE = "view_geocpm_aus_config_";
 
+    /**
+     * (Most likely, ) there is one results folder for each rain model (0001, 0002, ...). As we assume that there is
+     * only one rain model, we hard-code this results folder.
+     */
+    private static final String RESULTS_FOLDER = "0001";
+
     private static final String CRS = "               PROJCS[&quot;DHDN / 3-degree Gauss-Kruger zone 2&quot;, "
                 + "  GEOGCS[&quot;DHDN&quot;, "
                 + "    DATUM[&quot;Deutsches Hauptdreiecksnetz&quot;, "
@@ -113,12 +119,13 @@ public final class GeoCPMAusImport {
     //~ Instance fields --------------------------------------------------------
 
     private int configId;
-    private final File infoFile;
-    private final File maxFile;
+    private File infoFile;
+    private File maxFile;
+
     private final String user;
     private final String password;
     private final String dbUrl;
-    private final String importFolder;
+    private final File targetFolder;
 
     private final String restUser;
     private final String restPassword;
@@ -130,7 +137,7 @@ public final class GeoCPMAusImport {
     /**
      * Creates a new GeoCPMAusImport object.
      *
-     * @param   importFolder  configId DOCUMENT ME!
+     * @param   targetFolder  configId DOCUMENT ME!
      * @param   user          DOCUMENT ME!
      * @param   password      DOCUMENT ME!
      * @param   dbUrl         DOCUMENT ME!
@@ -139,9 +146,11 @@ public final class GeoCPMAusImport {
      * @param   restUrl       DOCUMENT ME!
      * @param   workspace     DOCUMENT ME!
      *
-     * @throws  IOException  DOCUMENT ME!
+     * @throws  IOException               DOCUMENT ME!
+     * @throws  NullPointerException      DOCUMENT ME!
+     * @throws  IllegalArgumentException  DOCUMENT ME!
      */
-    public GeoCPMAusImport(final String importFolder,
+    public GeoCPMAusImport(final File targetFolder,
             final String user,
             final String password,
             final String dbUrl,
@@ -149,7 +158,14 @@ public final class GeoCPMAusImport {
             final String restPassword,
             final String restUrl,
             final String workspace) throws IOException {
-        this.checkString(importFolder);
+        if (targetFolder == null) {
+            throw new NullPointerException("Target folder must not be null");
+        }
+
+        if (!targetFolder.isDirectory()) {
+            throw new IllegalArgumentException("Target folder " + targetFolder + " is not a directory");
+        }
+
         this.checkString(user);
         this.checkString(password);
         this.checkString(dbUrl);
@@ -158,17 +174,12 @@ public final class GeoCPMAusImport {
         this.checkString(restPassword);
         this.checkString(workspace);
 
-        this.infoFile = new File(importFolder, INFO_FILE);
-        this.maxFile = new File(importFolder, MAX_FILE);
-
-        this.checkFile(this.infoFile);
-        this.checkFile(this.maxFile);
+        this.targetFolder = targetFolder;
 
         this.configId = -1;
         this.user = user;
         this.password = password;
         this.dbUrl = dbUrl;
-        this.importFolder = importFolder;
 
         this.restUser = restUser;
         this.restPassword = restPassword;
@@ -181,18 +192,31 @@ public final class GeoCPMAusImport {
     /**
      * DOCUMENT ME!
      *
-     * @throws  IOException  DOCUMENT ME!
+     * @throws  IOException       DOCUMENT ME!
+     * @throws  RuntimeException  DOCUMENT ME!
      */
     private void loadExportMetaData() throws IOException {
         LOG.info("Start loading export meta data...");
 
-        final File exportMetaDataFile = new File(importFolder, GeoCPMExport.META_DATA_FILE_NAME);
+        final File exportMetaDataFile = new File(this.targetFolder, GeoCPMExport.META_DATA_FILE_NAME);
         this.checkFile(exportMetaDataFile);
 
         final Properties prop = new Properties();
         prop.load(new FileInputStream(exportMetaDataFile));
 
         this.configId = Integer.parseInt(prop.getProperty(GeoCPMExport.PROP_CONFIG_ID));
+
+        final String geocpmFolder = prop.getProperty(GeoCPMExport.PROP_GEOCPM_FOLDER);
+        final File resultsFolderFile = new File(new File(this.targetFolder, geocpmFolder), RESULTS_FOLDER);
+        if (!resultsFolderFile.exists()) {
+            throw new RuntimeException("There is no results folder named " + resultsFolderFile);
+        }
+
+        this.infoFile = new File(resultsFolderFile, INFO_FILE);
+        this.maxFile = new File(resultsFolderFile, MAX_FILE);
+
+        this.checkFile(this.infoFile);
+        this.checkFile(this.maxFile);
 
         LOG.info("Export meta data has been loaded successfully");
     }
