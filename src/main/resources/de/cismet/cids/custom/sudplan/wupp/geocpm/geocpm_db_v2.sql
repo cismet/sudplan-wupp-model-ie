@@ -40,6 +40,8 @@ CREATE TABLE geocpm_configuration (
     geocpmi_d TEXT,
     geocpmf_d TEXT,
     geocpms_d TEXT,
+    geocpm_ein_folder VARCHAR(50),
+    dyna_ein_folder VARCHAR(50),
 
 
     FOREIGN KEY (geom) REFERENCES geom
