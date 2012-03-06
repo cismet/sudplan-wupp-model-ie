@@ -71,16 +71,16 @@ public class GeoCPMAusImportTest
     public GeoCPMAusImportTest() {
     }
 
-    @BeforeClass @Ignore
-    public static void setUpClass() throws Exception 
-    {
-        final Properties p = new Properties();
-        p.put("log4j.appender.Remote", "org.apache.log4j.net.SocketAppender");
-        p.put("log4j.appender.Remote.remoteHost", "localhost");
-        p.put("log4j.appender.Remote.port", "4445");
-        p.put("log4j.appender.Remote.locationInfo", "true");
-        p.put("log4j.rootLogger", "ALL,Remote");
-        org.apache.log4j.PropertyConfigurator.configure(p);
+//    @BeforeClass @Ignore
+//    public static void setUpClass() throws Exception 
+//    {
+//        final Properties p = new Properties();
+//        p.put("log4j.appender.Remote", "org.apache.log4j.net.SocketAppender");
+//        p.put("log4j.appender.Remote.remoteHost", "localhost");
+//        p.put("log4j.appender.Remote.port", "4445");
+//        p.put("log4j.appender.Remote.locationInfo", "true");
+//        p.put("log4j.rootLogger", "ALL,Remote");
+//        org.apache.log4j.PropertyConfigurator.configure(p);
 
 //        
 //        SERVICE.dropDatabase(TEST_DB_NAME); 
@@ -92,8 +92,8 @@ public class GeoCPMAusImportTest
 //            throw new IllegalStateException("cannot initilise test db");
 //        }
 //        
-        CON  = SERVICE.getConnection(TEST_DB_NAME);
-        STMT = CON.createStatement();    
+//        CON  = SERVICE.getConnection(TEST_DB_NAME);
+//        STMT = CON.createStatement();    
 //
 //        try
 //        {
@@ -114,51 +114,51 @@ public class GeoCPMAusImportTest
 //                                 new InputStreamReader(                       
 //                                     GeoCPMAusImportTest.class.getResourceAsStream("../geocpm_db_v2.sql"))));
         
-    }
+//    }
 
-    @AfterClass @Ignore
-    public static void tearDownClass() throws Exception 
-    {
-        STMT.close();
-        CON.close();
-        
+//    @AfterClass @Ignore
+//    public static void tearDownClass() throws Exception 
+//    {
+//        STMT.close();
+//        CON.close();
+//        
 //        if (! Boolean.valueOf(SERVICE.dropDatabase(TEST_DB_NAME))) 
 //        {
 //            throw new IllegalStateException("could not drop test db");
 //        }
-    }
+//    }
     
-    @Before @Ignore
-    public void setUp() throws Exception
-    {
-        this.testImportFolder = new File("/home/bfriedrich/NetBeansProjects/wupp-model-ie/src/main/resources/de/cismet/cids/custom/sudplan/wupp/geocpm/ie");
-    }
+//    @Before @Ignore
+//    public void setUp() throws Exception
+//    {
+//        this.testImportFolder = new File("/home/bfriedrich/NetBeansProjects/wupp-model-ie/src/main/resources/de/cismet/cids/custom/sudplan/wupp/geocpm/ie");
+//    }
+//    
     
-    
-    @Test @Ignore
-    public void testImportExport() throws Exception
-    {
-        final String dbURL =  CON.getMetaData().getURL();
-        
-//        final BufferedInputStream bin = new BufferedInputStream(GeoCPMAusImportTest.class.getResourceAsStream(TEST_GEOCPM_FILE));
-//        final GeoCPMImport geocpmImporter = new GeoCPMImport(bin, DB_USER, DB_PWD, dbURL);
-//        geocpmImporter.doImport();
-        
-        
-        
-        final GeoCPMAusImport importer = new GeoCPMAusImport( this.testImportFolder.getAbsolutePath(), 
-                                                              DB_USER, 
-                                                              DB_PWD, 
-                                                              dbURL, 
-                                                              RESTUSER, 
-                                                              DB_PWD, 
-                                                              RESTURL, 
-                                                              WORKSPACE);
-        
-        importer.go();
-  
-    }
-    
-  
- 
+//    @Test @Ignore
+//    public void testImportExport() throws Exception
+//    {
+//        final String dbURL =  CON.getMetaData().getURL();
+//        
+////        final BufferedInputStream bin = new BufferedInputStream(GeoCPMAusImportTest.class.getResourceAsStream(TEST_GEOCPM_FILE));
+////        final GeoCPMImport geocpmImporter = new GeoCPMImport(bin, DB_USER, DB_PWD, dbURL);
+////        geocpmImporter.doImport();
+//        
+//        
+//        
+//        final GeoCPMAusImport importer = new GeoCPMAusImport( this.testImportFolder, 
+//                                                              DB_USER, 
+//                                                              DB_PWD, 
+//                                                              dbURL, 
+//                                                              RESTUSER, 
+//                                                              DB_PWD, 
+//                                                              RESTURL, 
+//                                                              WORKSPACE);
+//        
+//        importer.go();
+//  
+//    }
+//    
+//  
+// 
 }

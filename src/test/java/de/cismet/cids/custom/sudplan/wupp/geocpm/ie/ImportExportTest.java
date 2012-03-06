@@ -111,15 +111,21 @@ public class ImportExportTest
 //        {
 //            throw new IllegalStateException("cannot initilise test db");
 //        }
-        
-//        CON  = SERVICE.getConnection(TEST_DB_NAME);
-//        STMT = CON.createStatement();    
-
+//        
+        CON  = SERVICE.getConnection(TEST_DB_NAME);
+        STMT = CON.createStatement();    
+//
+//
 //        try
 //        {            
 //            STMT.executeUpdate("drop view geosuche;"); // removed as geometry column modification wouldn't be possible otherwise
 //            STMT.execute("SELECT DropGeometryColumn('public','geom','geo_field');");
 //            STMT.execute("SELECT AddGeometryColumn( 'public','geom','geo_field', -1, 'GEOMETRY', 2 );");
+//            
+//            // delta configuration test case
+//            STMT.execute("INSERT INTO delta_configuration (description, locked, name, delta_breaking_edges, original_object) VALUES ('MyDeltaConfig dEsc', DEFAULT, 'MyDeltaConfig', 1, 1);");
+//            STMT.execute("INSERT INTO delta_breaking_edge (name, height, description, original_object)	VALUES ('mydeltaBK1', 0.5, 'mydeltaBK1 desc', 1);");
+//            STMT.execute("INSERT INTO delta_configuration_delta_breaking_edge (delta_configuration_reference, delta_breaking_edge) VALUES (4, 11);");
 //            
 //        }
 //        catch(final SQLException e)
@@ -133,7 +139,7 @@ public class ImportExportTest
 //        runner.runScript(new BufferedReader(
 //                                 new InputStreamReader(                       
 //                                     ImportExportTest.class.getResourceAsStream("../geocpm_db_v2.sql"))));
-        
+//        
     }
 
     @AfterClass 
@@ -187,14 +193,23 @@ public class ImportExportTest
     }
     
     
-    @Test @Ignore
+    @Test
     public void testImportExport() throws Exception
     {
-        final String dbURL =   "jdbc:postgresql://192.168.100.12:5432/sudplan_geocpm_test"; //CON.getMetaData().getURL();
+        final String dbURL =   CON.getMetaData().getURL(); //  "jdbc:postgresql://192.168.100.12:5432/sudplan_geocpm_test"; 
        
 //        GZIPInputStream gin = new GZIPInputStream(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE));
 //        BufferedInputStream geocpmEin = new BufferedInputStream(gin);
 //        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         
@@ -208,20 +223,20 @@ public class ImportExportTest
 //                                         new FileInputStream(new File("/home/bfriedrich/Desktop/geocpm/2012-02-27/DYNA-GeoCPM_120131/GeoCPM_DVWK_T=100a Nullvariante/DYNA.EIN")),
 //                                         geocpmID,
 //                                         geocpmFD,
-//                                         geocpmSD, 
+//                                         geocpmSD,
+//                                         "GeoCPM_Nullvariante_T=100a", // geocpm folder
+//                                         "GeoCPM_DVWK_T=100a Nullvariante", // dyna folder
 //                                         DB_USER, 
 //                                         DB_PWD, 
 //                                         dbURL);
 //        this.importer.doImport();
-        
-        
-        
-        
-        
-//        this.exporter = new GeoCPMExport(this.getNewestConfigId(),  this.testOutFile, DB_USER, DB_PWD, dbURL);//new GeoCPMExport(this.getNewestConfigId(), 4, this.testOutFile, DB_USER, DB_PWD, dbURL);
+//        
+//       
+//        
+//        this.exporter = new GeoCPMExport(this.getNewestConfigId(), new File("/tmp/geocpm_export"), DB_USER, DB_PWD, dbURL);
 //        this.exporter.doExport();
-        
-        
+//
+//        
 //        final ArrayList<Double> precipitations = new ArrayList<Double>(12);
 //        precipitations.add(3.00);
 //        precipitations.add(3.00);
@@ -244,6 +259,24 @@ public class ImportExportTest
 //        
 //        final Rainevent rainEvent = new Rainevent(5, precipitations);
 //        this.exporter.generateDYNA(rainEvent);
+    
+ 
+       
+        
+//           final GeoCPMAusImport ausImport = new GeoCPMAusImport(new File("/tmp/geocpm_export"), 
+//                    DB_USER, DB_PWD, dbURL, "admin", "geoserver", "http://localhost:8080/geoserver", "sudplan");
+//           ausImport.go();
+//        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
 //        
 //
