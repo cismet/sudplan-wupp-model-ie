@@ -94,7 +94,7 @@ public class GeoCPMExport {
     public static final String Q_OUT = "Ansatz Q out";                              // NOI18N
 
     public static final String FIELD_SEP = "     "; // NOI18N
-    public static final char EOL = '\n';
+    public static final String EOL = "\r\n";
     public static final String COL = ": ";
 
     public static final String NULL_TOKEN_FILE = "-1.#R";

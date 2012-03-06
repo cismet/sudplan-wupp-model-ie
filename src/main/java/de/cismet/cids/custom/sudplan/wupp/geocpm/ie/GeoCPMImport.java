@@ -11,12 +11,10 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
@@ -26,8 +24,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 
 import java.math.BigDecimal;
-
-import java.net.URL;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -41,11 +37,9 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
-import java.util.logging.Level;
 
 /**
  * This is a rather dirty implementation of a GeoCPM.ein (GeoCPM interface description v0.5 (5th October 2011)) file
@@ -979,7 +973,6 @@ public class GeoCPMImport {
             final int numLines = originalDynaLines.size();
 
             final ByteArrayOutputStream bout = new ByteArrayOutputStream(500 * 1024); // preallocate 500kb
-//            final DataOutputStream dout = new DataOutputStream(bout);
             final BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(bout, GeoCPMExport.DYNA_ENC));
 
             String line;
@@ -987,10 +980,8 @@ public class GeoCPMImport {
                 line = originalDynaLines.get(i);
                 if (line.startsWith("07")) {
                     // put placeholder for new rain data generated from a Rainevent
-// dout.writeChars("{0}");
                     writer.write("{0}");
                     // NOTE: no linefeed after placeholder!
-
                     do {
                         // ignore all 07 data type records
                         i++;
@@ -999,17 +990,15 @@ public class GeoCPMImport {
 
                     writer.write(line);
                     writer.newLine();
-//                    dout.writeChars(line);
-//                    dout.writeChar('\n');
                 } else {
                     writer.write(line);
-//                    dout.writeChars(line);
                     if (i < (numLines - 1)) {
-//                        dout.writeChar('\n');
                         writer.newLine();
                     }
                 }
             }
+            writer.close();
+
             final String dynaForm = this.encodeStreamToBase64(new ByteArrayInputStream(bout.toByteArray()));
 
             // prepare binary data for import
