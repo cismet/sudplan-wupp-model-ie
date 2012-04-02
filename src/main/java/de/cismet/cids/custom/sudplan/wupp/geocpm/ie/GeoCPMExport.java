@@ -43,8 +43,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import de.cismet.cids.custom.sudplan.geocpmrest.io.Rainevent;
-
 /**
  * GeoCPMExport exports GeoCPM data which was imported by {@link GeoCPMImport} before to a format which is compliant to
  * the GeoCPM interface description v0.5 (5th October 2011).
@@ -1114,14 +1112,15 @@ public class GeoCPMExport {
     /**
      * Generates DYNA.EIN file (according to kpphydra.chm from 10.09.2009) with the form imported with GeoCPMImporter.
      *
-     * @param   rainEvent  DOCUMENT ME!
+     * @param   interval        rainEvent DOCUMENT ME!
+     * @param   precipitations  DOCUMENT ME!
      *
      * @throws  NullPointerException  DOCUMENT ME!
      * @throws  RuntimeException      DOCUMENT ME!
      */
-    public void generateDYNA(final Rainevent rainEvent) {
-        if (rainEvent == null) {
-            throw new NullPointerException("Rainevent must not be null");
+    public void generateDYNA(final int interval, final List<Double> precipitations) {
+        if (precipitations == null) {
+            throw new NullPointerException("Precipitation must not be null");
         }
 
         Connection con = null;
@@ -1162,7 +1161,7 @@ public class GeoCPMExport {
             int recordNo = 1;
 
             // interval obtained by rain event is given in minutes,
-            final String intervalString = DCF1.format(rainEvent.getInterval());
+            final String intervalString = DCF1.format(interval);
 
             // create header of first data record
             rainDataRecord.append("07")                      // Col.  1 - 2  type of data
@@ -1175,7 +1174,6 @@ public class GeoCPMExport {
             .append("          ");                           // Col. 21 - 30 [space]
 
             // process precipitation data
-            final List<Double> precipitations = rainEvent.getPrecipitations();
             final int numRecords = precipitations.size();
 
             String precipitation;

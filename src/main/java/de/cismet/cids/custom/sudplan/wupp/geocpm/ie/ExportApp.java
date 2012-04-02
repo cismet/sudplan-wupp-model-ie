@@ -28,8 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Properties;
 
-import de.cismet.cids.custom.sudplan.geocpmrest.io.Rainevent;
-
 /**
  * DOCUMENT ME!
  *
@@ -108,8 +106,7 @@ public final class ExportApp {
 
                 LOG.info("start DYNA generation");
                 final int interval = raineventResult.getInt("interval");
-                final Rainevent event = new Rainevent(interval, rainValues);
-                exporter.generateDYNA(event);
+                exporter.generateDYNA(interval, rainValues);
 
                 LOG.info("Export has been finished successfully");
             } else {

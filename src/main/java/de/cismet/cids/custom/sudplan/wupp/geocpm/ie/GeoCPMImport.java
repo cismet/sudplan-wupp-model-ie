@@ -370,6 +370,10 @@ public class GeoCPMImport {
             con.rollback();
 
             throw ex;
+        } catch (final Exception e) {
+            LOG.error("error during import", e);      // NOI18N
+            con.rollback();
+            throw new SQLException(e);
         } finally {
             try {
                 finish(con);

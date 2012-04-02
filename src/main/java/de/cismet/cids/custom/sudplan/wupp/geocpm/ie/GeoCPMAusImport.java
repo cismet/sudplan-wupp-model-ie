@@ -192,6 +192,21 @@ public final class GeoCPMAusImport {
     /**
      * DOCUMENT ME!
      *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  IllegalStateException  DOCUMENT ME!
+     */
+    public String getLayerName() {
+        if (this.configId == -1) {
+            throw new IllegalStateException("No layer has been imported yet");
+        }
+
+        return VIEW_NAME_BASE + this.configId;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
      * @throws  IOException       DOCUMENT ME!
      * @throws  RuntimeException  DOCUMENT ME!
      */
