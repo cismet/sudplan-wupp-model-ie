@@ -16,7 +16,6 @@
  */
 package de.cismet.cids.custom.sudplan.wupp.geocpm.ie;
 
-import de.cismet.cids.custom.sudplan.geocpmrest.io.Rainevent;
 import de.cismet.remotetesthelper.ws.rest.RemoteTestHelperClient;
 import java.io.BufferedReader;
 import java.io.File;
@@ -84,7 +83,7 @@ public class ImportExportTest
     private static final String DB_PWD    = "cismetz12";
     
     
-    private static final String TEST_DB_NAME = "simple_geocpm_test_db2";
+    private static final String TEST_DB_NAME = "simple_geocpm_test_db3";
     private static final RemoteTestHelperClient SERVICE = new RemoteTestHelperClient();
     
     
@@ -95,13 +94,13 @@ public class ImportExportTest
     @BeforeClass
     public static void setUpClass() throws Exception 
     {    
-        final Properties p = new Properties();
-        p.put("log4j.appender.Remote", "org.apache.log4j.net.SocketAppender");
-        p.put("log4j.appender.Remote.remoteHost", "localhost");
-        p.put("log4j.appender.Remote.port", "4445");
-        p.put("log4j.appender.Remote.locationInfo", "true");
-        p.put("log4j.rootLogger", "ALL,Remote");
-        org.apache.log4j.PropertyConfigurator.configure(p);
+//        final Properties p = new Properties();
+//        p.put("log4j.appender.Remote", "org.apache.log4j.net.SocketAppender");
+//        p.put("log4j.appender.Remote.remoteHost", "localhost");
+//        p.put("log4j.appender.Remote.port", "4445");
+//        p.put("log4j.appender.Remote.locationInfo", "true");
+//        p.put("log4j.rootLogger", "ALL,Remote");
+//        org.apache.log4j.PropertyConfigurator.configure(p);
 
 
 //        SERVICE.dropDatabase(TEST_DB_NAME);
@@ -112,8 +111,8 @@ public class ImportExportTest
 //            throw new IllegalStateException("cannot initilise test db");
 //        }
 //        
-        CON  = SERVICE.getConnection(TEST_DB_NAME);
-        STMT = CON.createStatement();    
+//        CON  = SERVICE.getConnection(TEST_DB_NAME);
+//        STMT = CON.createStatement();    
 //
 //
 //        try
@@ -121,11 +120,13 @@ public class ImportExportTest
 //            STMT.executeUpdate("drop view geosuche;"); // removed as geometry column modification wouldn't be possible otherwise
 //            STMT.execute("SELECT DropGeometryColumn('public','geom','geo_field');");
 //            STMT.execute("SELECT AddGeometryColumn( 'public','geom','geo_field', -1, 'GEOMETRY', 2 );");
+//        
+//              
 //            
-//            // delta configuration test case
-//            STMT.execute("INSERT INTO delta_configuration (description, locked, name, delta_breaking_edges, original_object) VALUES ('MyDeltaConfig dEsc', DEFAULT, 'MyDeltaConfig', 1, 1);");
-//            STMT.execute("INSERT INTO delta_breaking_edge (name, height, description, original_object)	VALUES ('mydeltaBK1', 0.5, 'mydeltaBK1 desc', 1);");
-//            STMT.execute("INSERT INTO delta_configuration_delta_breaking_edge (delta_configuration_reference, delta_breaking_edge) VALUES (4, 11);");
+////            // delta configuration test case
+////            STMT.execute("INSERT INTO delta_configuration (description, locked, name, delta_breaking_edges, original_object) VALUES ('MyDeltaConfig dEsc', DEFAULT, 'MyDeltaConfig', 1, 1);");
+////            STMT.execute("INSERT INTO delta_breaking_edge (name, height, description, original_object)	VALUES ('mydeltaBK1', 0.5, 'mydeltaBK1 desc', 1);");
+////            STMT.execute("INSERT INTO delta_configuration_delta_breaking_edge (delta_configuration_reference, delta_breaking_edge) VALUES (4, 11);");
 //            
 //        }
 //        catch(final SQLException e)
@@ -139,7 +140,11 @@ public class ImportExportTest
 //        runner.runScript(new BufferedReader(
 //                                 new InputStreamReader(                       
 //                                     ImportExportTest.class.getResourceAsStream("../geocpm_db_v2.sql"))));
-//        
+//          
+//                  
+//        STMT.execute("INSERT INTO rainevent VALUES ('120:157:226:584:98:82:71:63:56:51:47:44', 'Euler2 (60min, 100a) KOSTRA', 102, 24407, false, NULL, 5);");
+//        STMT.execute("INSERT INTO rainevent VALUES ('88.89:88.89:88.89:88.89:88.89:88.89:333.33:333.33:333.33:333.33:80.00:80.00:80.00:80.00:80.00:80.00:80.00:80.00:80.00:80.00', 'Original Lüntenbeck Regenereignis', 7, 24408, false, NULL, 3);");
+
     }
 
     @AfterClass 
@@ -196,8 +201,11 @@ public class ImportExportTest
     @Test
     public void testImportExport() throws Exception
     {
-        final String dbURL =   CON.getMetaData().getURL(); //  "jdbc:postgresql://192.168.100.12:5432/sudplan_geocpm_test"; 
+//        final String dbURL =   CON.getMetaData().getURL(); //  "jdbc:postgresql://192.168.100.12:5432/sudplan_geocpm_test"; 
        
+        
+        
+        
 //        GZIPInputStream gin = new GZIPInputStream(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE));
 //        BufferedInputStream geocpmEin = new BufferedInputStream(gin);
 //        
@@ -219,7 +227,7 @@ public class ImportExportTest
 //        final InputStream geocpmID = ImportExportTest.class.getResourceAsStream(GEOCPMI_D);
 //        
 //        
-//        this.importer = new GeoCPMImport(new FileInputStream(new File("/home/bfriedrich/Desktop/geocpm/2012-02-27/DYNA-GeoCPM_120131/GeoCPM_Nullvariante_T=100a/GeoCPM.ein")),//geocpmEin,
+//        this.importer = new GeoCPMImport(new FileInputStream(new File("/home/bfriedrich/Desktop/geocpm/2012-02-27/DYNA-GeoCPM_120131/GeoCPM_Nullvariante_T=100a/GeoCPM.ein")),
 //                                         new FileInputStream(new File("/home/bfriedrich/Desktop/geocpm/2012-02-27/DYNA-GeoCPM_120131/GeoCPM_DVWK_T=100a Nullvariante/DYNA.EIN")),
 //                                         geocpmID,
 //                                         geocpmFD,
@@ -230,6 +238,18 @@ public class ImportExportTest
 //                                         DB_PWD, 
 //                                         dbURL);
 //        this.importer.doImport();
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 //        
 //       
 //        
@@ -319,10 +339,10 @@ public class ImportExportTest
     
     
     
-    private void testDyna(final Rainevent rainEvent, final String referenceFile) throws Exception
+    private void testDyna(final int interval, final List<Double> rainValues, final String referenceFile) throws Exception
     {
         this.exporter = new GeoCPMExport(1, this.testOutFile, DB_USER, DB_PWD, CON.getMetaData().getURL());
-        this.exporter.generateDYNA(rainEvent);
+        this.exporter.generateDYNA(interval, rainValues);
         
         final String parent   = this.testOutFile.getParent();
         final File   exported = new File(parent, GeoCPMExport.DYNA_FILE);
@@ -370,9 +390,9 @@ public class ImportExportTest
         precipitations.add(3.00);
 
         
-        final Rainevent rainEvent = new Rainevent(300, precipitations);
-        
-        this.testDyna(rainEvent, "DYNA.testDynaExport");
+//        final Rainevent rainEvent = new Rainevent(300, precipitations);
+//        
+        this.testDyna(300, precipitations, "DYNA.testDynaExport");
     }
     
     @Test   @Ignore
@@ -383,8 +403,8 @@ public class ImportExportTest
         precipitations.add(1234567.89);
         precipitations.add(12345671.89);
         
-        final Rainevent rainEvent = new Rainevent(300, precipitations);
-        this.testDyna(rainEvent, "DYNA.testDynaTooLargeFieldValues");
+//        final Rainevent rainEvent = new Rainevent(300, precipitations);
+        this.testDyna(300, precipitations, "DYNA.testDynaTooLargeFieldValues");
     }
     
     @Test(expected=Exception.class) @Ignore
@@ -411,7 +431,7 @@ public class ImportExportTest
         // that's the one which causes too many records
         precipitations.add(1.00); 
         
-        final Rainevent rainEvent = new Rainevent(300, precipitations);
-        this.testDyna(rainEvent, "DYNA.testDynaExport");
+//        final Rainevent rainEvent = new Rainevent(300, precipitations);
+        this.testDyna(300, precipitations, "DYNA.testDynaExport");
     }
 }
