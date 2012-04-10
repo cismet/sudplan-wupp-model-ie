@@ -166,6 +166,7 @@ CREATE TABLE geocpm_manhole (
     geocpm_configuration_id INTEGER,
     internal_id INTEGER,
     cap_height NUMERIC(17, 2),
+    free_leakage INTEGER,
     entry_profile NUMERIC(17, 2),
     loss_overfall NUMERIC(17, 2),
     loss_emersion NUMERIC(17, 2),
@@ -279,3 +280,38 @@ CREATE TABLE delta_configuration_delta_breaking_edge
   delta_breaking_edge integer NOT NULL,
   CONSTRAINT delta_configuration_delta_breaking_edge_pkey PRIMARY KEY (id )
 );
+
+
+
+--------------------------------
+-- rainevent
+--------------------------------
+
+CREATE SEQUENCE rainevent_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.rainevent_seq OWNER TO postgres;
+
+--
+-- TOC entry 283 (class 1259 OID 26684)
+-- Dependencies: 3279 3280 6
+-- Name: rainevent; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE rainevent (
+    data text,
+    name character varying(200) NOT NULL,
+    id integer DEFAULT nextval('rainevent_seq'::regclass) NOT NULL,
+    geom integer,
+    forecast boolean DEFAULT false NOT NULL,
+    description text,
+    "interval" integer
+);
+
+
+ALTER TABLE public.rainevent OWNER TO postgres;

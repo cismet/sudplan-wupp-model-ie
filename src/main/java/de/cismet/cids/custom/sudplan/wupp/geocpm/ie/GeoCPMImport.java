@@ -770,17 +770,20 @@ public class GeoCPMImport {
 
         //J-
         batchSQL.append("\nINSERT INTO geocpm_manhole (geocpm_configuration_id, internal_id, cap_height, ")  // NOI18N
-                .append("entry_profile, loss_overfall, loss_emersion, length_emersion, name) VALUES (");     // NOI18N
-        batchSQL.append(configId).append(", "); // NOI18N
-        batchSQL.append(split[split.length - 7]).append(", ");                                               // NOI18N
-        batchSQL.append(split[split.length - 6]).append(", ");                                               // NOI18N
-        batchSQL.append(split[split.length - 5]).append(", ");                                               // NOI18N
-        batchSQL.append(split[split.length - 4]).append(", ");                                               // NOI18N
-        batchSQL.append(split[split.length - 3]).append(", ");                                               // NOI18N
-        batchSQL.append(split[split.length - 2]).append(", ");                                               // NOI18N
-        batchSQL.append('\'').append(split[split.length - 1]).append("');");                                 // NOI18N
+                .append("free_leakage, entry_profile, loss_overfall, loss_emersion, length_emersion, name) VALUES (");     // NOI18N
+        batchSQL.append(configId).append(',');                              // NOI18N  // geocpm_configuration_id
+        batchSQL.append(split[split.length - 8]).append(',');               // NOI18N  // internal_id
+        batchSQL.append(split[split.length - 7]).append(',');               // NOI18N  // cap_height
+        batchSQL.append(split[split.length - 6]).append(',');               // NOI18N  // free_leakage
+        batchSQL.append(split[split.length - 5]).append(',');               // NOI18N  // entry_profile
+        batchSQL.append(split[split.length - 4]).append(',');               // NOI18N  // loss_overfall
+        batchSQL.append(split[split.length - 3]).append(',');               // NOI18N  // loss_emersion
+        batchSQL.append(split[split.length - 2]).append(',');               // NOI18N  // length_emersion
+        batchSQL.append('\'').append(split[split.length - 1]).append('\''); // NOI18N  // name
+        batchSQL.append(')').append(';');                                   // NOI18N
 
-        for(int i = 1; i < split.length - 7; ++i){
+
+        for(int i = 1; i < split.length - 8; ++i){
             batchSQL.append("\nINSERT INTO geocpm_jt_manhole_triangle (geocpm_manhole_id, geocpm_triangle_id")  // NOI18N
                     .append(") VALUES (");                                                                      // NOI18N
             batchSQL.append("(SELECT id FROM geocpm_manhole WHERE geocpm_configuration_id = ").append(configId) // NOI18N

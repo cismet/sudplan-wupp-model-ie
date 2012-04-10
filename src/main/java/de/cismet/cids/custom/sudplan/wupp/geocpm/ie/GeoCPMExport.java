@@ -33,15 +33,11 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 /**
  * GeoCPMExport exports GeoCPM data which was imported by {@link GeoCPMImport} before to a format which is compliant to
@@ -648,7 +644,7 @@ public class GeoCPMExport {
 
         try {
             result = stmt.executeQuery(
-                    "select id, internal_id,  cap_height, entry_profile, loss_overfall, loss_emersion, length_emersion, name"
+                    "select id, internal_id,  cap_height, free_leakage, entry_profile, loss_overfall, loss_emersion, length_emersion, name"
                             + " from geocpm_manhole"
                             + " where geocpm_configuration_id = "
                             + this.configId);
@@ -662,14 +658,14 @@ public class GeoCPMExport {
                 manholeIds.add(this.handleValue(result.getString(1))); // id
 
                 tmpContent = new StringBuilder(50);
-
                 tmpContent.append(result.getString(2)).append(FIELD_SEP);                             // internal id
                 tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(3))).append(FIELD_SEP); // cap_height
-                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(4))).append(FIELD_SEP); // entry_profile
-                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(5))).append(FIELD_SEP); // loss_overfall
-                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(6))).append(FIELD_SEP); // loss_emersion
-                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(7))).append(FIELD_SEP); // length_emersion
-                tmpContent.append(this.handleValue(result.getString(8))).append(EOL);                 // length_emersion
+                tmpContent.append(result.getString(4)).append(FIELD_SEP);                             // free_leakage
+                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(5))).append(FIELD_SEP); // entry_profile
+                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(6))).append(FIELD_SEP); // loss_overfall
+                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(7))).append(FIELD_SEP); // loss_emersion
+                tmpContent.append(this.handleValue(DCF2, result.getBigDecimal(8))).append(FIELD_SEP); // length_emersion
+                tmpContent.append(this.handleValue(result.getString(9))).append(EOL);                 // name
 
                 halfRecs.add(tmpContent);
             }
