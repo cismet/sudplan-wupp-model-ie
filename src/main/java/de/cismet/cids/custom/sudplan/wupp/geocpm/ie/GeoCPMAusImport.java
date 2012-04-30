@@ -74,7 +74,7 @@ public final class GeoCPMAusImport {
 
     private static final Logger LOG = Logger.getLogger(GeoCPMAusImport.class);
 
-    private static final String GEOSERVER_DATASTORE = "geocpm_datastore";
+    private static final String GEOSERVER_DATASTORE = "geocpm";
     private static final String GEOSERVER_SLD = "geocpm_water_level";
 
     private static final String VIEW_NAME_BASE = "view_geocpm_aus_config_";
@@ -83,7 +83,7 @@ public final class GeoCPMAusImport {
      * (Most likely, ) there is one results folder for each rain model (0001, 0002, ...). As we assume that there is
      * only one rain model, we hard-code this results folder.
      */
-    private static final String RESULTS_FOLDER = "0001";
+    public static final String RESULTS_FOLDER = "0001";
 
     private static final String CRS = "               PROJCS[&quot;DHDN / 3-degree Gauss-Kruger zone 2&quot;, "
                 + "  GEOGCS[&quot;DHDN&quot;, "
@@ -632,12 +632,14 @@ public final class GeoCPMAusImport {
             LOG.info("Import has been finished successfully");
         } catch (final Exception e) {
             LOG.error("An error has occurred", e);
+            // TODO better exception type
+            throw new RuntimeException(e);
         } finally {
             if (con != null) {
                 try {
                     con.close();
                 } catch (final SQLException ex) {
-                    LOG.error("An error has occurred while closing the connection", ex);
+                    LOG.warn("An error has occurred while closing the connection", ex);
                 }
             }
         }

@@ -110,6 +110,7 @@ public class GeoCPMImport {
     private final transient InputStream geocpmID;
     private final transient InputStream geocpmFD;
     private final transient InputStream geocpmSD;
+    private final transient InputStream geocpmND;
     private final transient InputStream dyna;
 
     private final transient String geocpmFolder;
@@ -125,6 +126,7 @@ public class GeoCPMImport {
      * @param   geocpmID      DOCUMENT ME!
      * @param   geocpmFD      DOCUMENT ME!
      * @param   geocpmSD      DOCUMENT ME!
+     * @param   geocpmND      DOCUMENT ME!
      * @param   geocpmFolder  DOCUMENT ME!
      * @param   dynaFolder    DOCUMENT ME!
      * @param   user          DOCUMENT ME!
@@ -138,6 +140,7 @@ public class GeoCPMImport {
             final InputStream geocpmID,
             final InputStream geocpmFD,
             final InputStream geocpmSD,
+            final InputStream geocpmND,
             final String geocpmFolder,
             final String dynaFolder,
             final String user,
@@ -153,6 +156,7 @@ public class GeoCPMImport {
         this.geocpmFD = geocpmFD;
         this.geocpmID = geocpmID;
         this.geocpmSD = geocpmSD;
+        this.geocpmND = geocpmND;
 
         this.geocpmFolder = geocpmFolder;
         this.dynaFolder = dynaFolder;
@@ -1023,6 +1027,7 @@ public class GeoCPMImport {
             final String geoID = this.encodeStreamToBase64(this.geocpmID);
             final String geoFD = this.encodeStreamToBase64(this.geocpmFD);
             final String geoSD = this.encodeStreamToBase64(this.geocpmSD);
+            final String geoND = this.encodeStreamToBase64(this.geocpmND);
 
             batchSQL.append(" UPDATE geocpm_configuration SET ")
                     .append(" dyna_form=\'")
@@ -1039,6 +1044,10 @@ public class GeoCPMImport {
                     .append(',')
                     .append(" geocpms_d=\'")
                     .append(geoSD)
+                    .append('\'')
+                    .append(',')
+                    .append(" geocpmn_d=\'")
+                    .append(geoND)
                     .append('\'')
                     .append(" WHERE id=")
                     .append(configId);

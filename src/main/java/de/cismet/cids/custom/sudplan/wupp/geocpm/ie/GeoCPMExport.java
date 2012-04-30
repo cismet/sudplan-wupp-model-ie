@@ -112,6 +112,7 @@ public class GeoCPMExport {
     public static final String GEOCPMF_FILE = "GEOCPMF.D";
     public static final String GEOCPMI_FILE = "GEOCPMI.D";
     public static final String GEOCPMS_FILE = "GEOCPMS.D";
+    public static final String GEOCPMN_FILE = "GEOCPMN.D";
 
     public static final String DYNA_ENC = "ISO-8859-1";
 
@@ -1134,7 +1135,7 @@ public class GeoCPMExport {
             stmt = con.createStatement();
 
             // obtain base64-encoded dyna representation from configuration
-            final ResultSet result = stmt.executeQuery(" SELECT dyna_form, geocpmi_d, geocpmf_d, geocpms_d "
+            final ResultSet result = stmt.executeQuery(" SELECT dyna_form, geocpmi_d, geocpmf_d, geocpms_d, geocpmn_d "
                             + " FROM geocpm_configuration "
                             + " WHERE id =" + this.configId);
             result.next();
@@ -1143,6 +1144,7 @@ public class GeoCPMExport {
             this.writeBinaryFile(result.getString(2), GEOCPMI_FILE);
             this.writeBinaryFile(result.getString(3), GEOCPMF_FILE);
             this.writeBinaryFile(result.getString(4), GEOCPMS_FILE);
+            this.writeBinaryFile(result.getString(5), GEOCPMN_FILE);
 
             final String base64Encoding = result.getString(1);
             final String dynaForm = new String(Base64.decodeBase64(base64Encoding.getBytes()), DYNA_ENC);
