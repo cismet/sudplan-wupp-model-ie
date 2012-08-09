@@ -16,7 +16,10 @@
  */
 package de.cismet.cids.custom.sudplan.wupp.geocpm.ie;
 
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.WebResource;
 import de.cismet.remotetesthelper.ws.rest.RemoteTestHelperClient;
+import de.cismet.remotetesthelper.ws.rest.RemoteTestHelperServiceRESTImpl;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -83,7 +86,7 @@ public class ImportExportTest
     private static final String DB_PWD    = "";
     
     
-    private static final String TEST_DB_NAME = "simple_geocpm_test_db3";
+    private static final String TEST_DB_NAME = "simple_geocpm_test_db_jimmy";
     private static final RemoteTestHelperClient SERVICE = new RemoteTestHelperClient();
     
     
@@ -94,69 +97,69 @@ public class ImportExportTest
     @BeforeClass
     public static void setUpClass() throws Exception 
     {    
-//        final Properties p = new Properties();
-//        p.put("log4j.appender.Remote", "org.apache.log4j.net.SocketAppender");
-//        p.put("log4j.appender.Remote.remoteHost", "localhost");
-//        p.put("log4j.appender.Remote.port", "4445");
-//        p.put("log4j.appender.Remote.locationInfo", "true");
-//        p.put("log4j.rootLogger", "ALL,Remote");
-//        org.apache.log4j.PropertyConfigurator.configure(p);
+        final Properties p = new Properties();
+        p.put("log4j.appender.Remote", "org.apache.log4j.net.SocketAppender");
+        p.put("log4j.appender.Remote.remoteHost", "localhost");
+        p.put("log4j.appender.Remote.port", "4445");
+        p.put("log4j.appender.Remote.locationInfo", "true");
+        p.put("log4j.rootLogger", "ALL,Remote");
+        org.apache.log4j.PropertyConfigurator.configure(p);
 
 
-//        SERVICE.dropDatabase(TEST_DB_NAME);
-//        
-//        
-//        if (! Boolean.valueOf(SERVICE.initCidsSystem(TEST_DB_NAME))) 
-//        {
-//            throw new IllegalStateException("cannot initilise test db");
-//        }
-//        
-//        CON  = SERVICE.getConnection(TEST_DB_NAME);
-//        STMT = CON.createStatement();    
-//
-//
-//        try
-//        {            
-//            STMT.executeUpdate("drop view geosuche;"); // removed as geometry column modification wouldn't be possible otherwise
-//            STMT.execute("SELECT DropGeometryColumn('public','geom','geo_field');");
-//            STMT.execute("SELECT AddGeometryColumn( 'public','geom','geo_field', -1, 'GEOMETRY', 2 );");
-//        
-//              
-//            
-////            // delta configuration test case
-////            STMT.execute("INSERT INTO delta_configuration (description, locked, name, delta_breaking_edges, original_object) VALUES ('MyDeltaConfig dEsc', DEFAULT, 'MyDeltaConfig', 1, 1);");
-////            STMT.execute("INSERT INTO delta_breaking_edge (name, height, description, original_object)	VALUES ('mydeltaBK1', 0.5, 'mydeltaBK1 desc', 1);");
-////            STMT.execute("INSERT INTO delta_configuration_delta_breaking_edge (delta_configuration_reference, delta_breaking_edge) VALUES (4, 11);");
-//            
-//        }
-//        catch(final SQLException e)
-//        {
-//            e.printStackTrace();
-//            e.getNextException().printStackTrace();
-//            throw e;
-//        }
-//        
-//        final ScriptRunner runner = new ScriptRunner(CON, true, true);
-//        runner.runScript(new BufferedReader(
-//                                 new InputStreamReader(                       
-//                                     ImportExportTest.class.getResourceAsStream("../geocpm_db_v2.sql"))));
-//          
-//                  
-//        STMT.execute("INSERT INTO rainevent VALUES ('120:157:226:584:98:82:71:63:56:51:47:44', 'Euler2 (60min, 100a) KOSTRA', 102, 24407, false, NULL, 5);");
-//        STMT.execute("INSERT INTO rainevent VALUES ('88.89:88.89:88.89:88.89:88.89:88.89:333.33:333.33:333.33:333.33:80.00:80.00:80.00:80.00:80.00:80.00:80.00:80.00:80.00:80.00', 'Original Lüntenbeck Regenereignis', 7, 24408, false, NULL, 3);");
+        SERVICE.dropDatabase(TEST_DB_NAME);
+        
+        
+        if (! Boolean.valueOf(SERVICE.initCidsSystem(TEST_DB_NAME))) 
+        {
+            throw new IllegalStateException("cannot initilise test db");
+        }
+        
+        CON  = SERVICE.getConnection(TEST_DB_NAME);
+        STMT = CON.createStatement();    
+
+
+        try
+        {            
+            STMT.executeUpdate("drop view geosuche;"); // removed as geometry column modification wouldn't be possible otherwise
+            STMT.execute("SELECT DropGeometryColumn('public','geom','geo_field');");
+            STMT.execute("SELECT AddGeometryColumn( 'public','geom','geo_field', -1, 'GEOMETRY', 2 );");
+        
+              
+            
+//            // delta configuration test case
+//            STMT.execute("INSERT INTO delta_configuration (description, locked, name, delta_breaking_edges, original_object) VALUES ('MyDeltaConfig dEsc', DEFAULT, 'MyDeltaConfig', 1, 1);");
+//            STMT.execute("INSERT INTO delta_breaking_edge (name, height, description, original_object)	VALUES ('mydeltaBK1', 0.5, 'mydeltaBK1 desc', 1);");
+//            STMT.execute("INSERT INTO delta_configuration_delta_breaking_edge (delta_configuration_reference, delta_breaking_edge) VALUES (4, 11);");
+            
+        }
+        catch(final SQLException e)
+        {
+            e.printStackTrace();
+            e.getNextException().printStackTrace();
+            throw e;
+        }
+        
+        final ScriptRunner runner = new ScriptRunner(CON, true, true);
+        runner.runScript(new BufferedReader(
+                                 new InputStreamReader(                       
+                                     ImportExportTest.class.getResourceAsStream("../geocpm_db_v2.sql"))));
+          
+                  
+        STMT.execute("INSERT INTO rainevent VALUES ('120:157:226:584:98:82:71:63:56:51:47:44', 'Euler2 (60min, 100a) KOSTRA', 102, 24407, false, NULL, 5);");
+        STMT.execute("INSERT INTO rainevent VALUES ('88.89:88.89:88.89:88.89:88.89:88.89:333.33:333.33:333.33:333.33:80.00:80.00:80.00:80.00:80.00:80.00:80.00:80.00:80.00:80.00', 'Original Lüntenbeck Regenereignis', 7, 24408, false, NULL, 3);");
 
     }
 
     @AfterClass 
     public static void tearDownClass() throws Exception 
     {
-//        STMT.close();
-//        CON.close();
+        STMT.close();
+        CON.close();
         
-//        if (! Boolean.valueOf(SERVICE.dropDatabase(TEST_DB_NAME))) 
-//        {
-//            throw new IllegalStateException("could not drop test db");
-//        }
+        if (! Boolean.valueOf(SERVICE.dropDatabase(TEST_DB_NAME))) 
+        {
+            throw new IllegalStateException("could not drop test db");
+        }
     }
     
     @Before 
@@ -170,13 +173,13 @@ public class ImportExportTest
     {
 //        this.testOutFile.delete();
 
-//        final File geocpmFDOut = new File(GEOCPMF_D);
-//        final File geocpmIDOut = new File(GEOCPMI_D);
-//        final File geocpmSDOut = new File(GEOCPMS_D);
-//        
-//        geocpmFDOut.delete();
-//        geocpmIDOut.delete();
-//        geocpmSDOut.delete();
+        final File geocpmFDOut = new File(GEOCPMF_D);
+        final File geocpmIDOut = new File(GEOCPMI_D);
+        final File geocpmSDOut = new File(GEOCPMS_D);
+        
+        geocpmFDOut.delete();
+        geocpmIDOut.delete();
+        geocpmSDOut.delete();
     }
     
     private int getNewestConfigId() throws Exception
@@ -201,32 +204,20 @@ public class ImportExportTest
     @Test
     public void testImportExport() throws Exception
     {
-//        final String dbURL =   CON.getMetaData().getURL(); //  "jdbc:postgresql://192.168.100.12:5432/sudplan_geocpm_test"; 
+        final String dbURL =   CON.getMetaData().getURL(); //  "jdbc:postgresql://192.168.100.12:5432/sudplan_geocpm_test"; 
        
         
         
         
-//        GZIPInputStream gin = new GZIPInputStream(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE));
-//        BufferedInputStream geocpmEin = new BufferedInputStream(gin);
-//        
+        GZIPInputStream gin = new GZIPInputStream(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE));
+        BufferedInputStream geocpmEin = new BufferedInputStream(gin);
         
         
+        final InputStream geocpmFD = ImportExportTest.class.getResourceAsStream(GEOCPMF_D);
+        final InputStream geocpmSD = ImportExportTest.class.getResourceAsStream(GEOCPMS_D);
+        final InputStream geocpmID = ImportExportTest.class.getResourceAsStream(GEOCPMI_D);
         
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-//        final InputStream geocpmFD = ImportExportTest.class.getResourceAsStream(GEOCPMF_D);
-//        final InputStream geocpmSD = ImportExportTest.class.getResourceAsStream(GEOCPMS_D);
-//        final InputStream geocpmID = ImportExportTest.class.getResourceAsStream(GEOCPMI_D);
-//        
-//        
 //        this.importer = new GeoCPMImport(new FileInputStream(new File("/home/bfriedrich/Desktop/geocpm/2012-02-27/DYNA-GeoCPM_120131/GeoCPM_Nullvariante_T=100a/GeoCPM.ein")),
 //                                         new FileInputStream(new File("/home/bfriedrich/Desktop/geocpm/2012-02-27/DYNA-GeoCPM_120131/GeoCPM_DVWK_T=100a Nullvariante/DYNA.EIN")),
 //                                         geocpmID,
@@ -237,24 +228,15 @@ public class ImportExportTest
 //                                         DB_USER, 
 //                                         DB_PWD, 
 //                                         dbURL);
-//        this.importer.doImport();
+        this.importer.doImport();
         
         
         
+        this.exporter = new GeoCPMExport(this.getNewestConfigId(), new File("/tmp/geocpm_export"), DB_USER, DB_PWD, dbURL);
+        this.exporter.doExport();
+
         
         
-        
-        
-        
-        
-        
-        
-        
-//        
-//       
-//        
-//        this.exporter = new GeoCPMExport(this.getNewestConfigId(), new File("/tmp/geocpm_export"), DB_USER, DB_PWD, dbURL);
-//        this.exporter.doExport();
 //
 //        
 //        final ArrayList<Double> precipitations = new ArrayList<Double>(12);

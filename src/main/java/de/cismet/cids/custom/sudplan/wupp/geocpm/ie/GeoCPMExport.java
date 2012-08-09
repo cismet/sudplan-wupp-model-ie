@@ -31,12 +31,7 @@ import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * GeoCPMExport exports GeoCPM data which was imported by {@link GeoCPMImport} before to a format which is compliant to
@@ -141,6 +136,12 @@ public class GeoCPMExport {
     private final Map<String, BigDecimal> bkDeltaMapping;
     private final Map<String, BigDecimal[]> triangleDeltaMapping;
 
+    // Datenstruktur fuer die Oberflächen änderungen
+    // String - Index der zu ändernden Punkte
+    // BigDecimal - die neue Höhe
+    // Boolean - Charakteristik der Höhenveränderung
+    private final Map<String, Map<BigDecimal, Boolean>> deltaSurfaceMapping;
+
     //~ Constructors -----------------------------------------------------------
 
     /**
@@ -210,8 +211,46 @@ public class GeoCPMExport {
 
         this.bkDeltaMapping = new HashMap<String, BigDecimal>();
         this.triangleDeltaMapping = new HashMap<String, BigDecimal[]>();
+        this.deltaSurfaceMapping = new HashMap<String, Map<BigDecimal, Boolean>>();
 
         Class.forName("org.postgresql.Driver"); // NOI18N
+    }
+
+    /**
+     * Creates a new GeoCPMExport object.
+     *
+     * @param   configId         DOCUMENT ME!
+     * @param   deltaConfigId    DOCUMENT ME!
+     * @param   geocpmEinFolder  DOCUMENT ME!
+     * @param   dynaEinFolder    DOCUMENT ME!
+     * @param   outFolder        DOCUMENT ME!
+     * @param   user             DOCUMENT ME!
+     * @param   password         DOCUMENT ME!
+     * @param   dbUrl            DOCUMENT ME!
+     *
+     * @throws  ClassNotFoundException  DOCUMENT ME!
+     * @throws  NullPointerException    DOCUMENT ME!
+     */
+    public GeoCPMExport(final int configId,
+            final int deltaConfigId,
+            final String geocpmEinFolder,
+            final String dynaEinFolder,
+            final File outFolder,
+            final String user,
+            final String password,
+            final String dbUrl) throws ClassNotFoundException {
+        this(configId, deltaConfigId, outFolder, user, password, dbUrl);
+
+        if ((geocpmEinFolder == null) && geocpmEinFolder.isEmpty()) {
+            throw new NullPointerException("Given geoCPM folder string is null or empty");
+        }
+
+        if ((dynaEinFolder == null) && dynaEinFolder.isEmpty()) {
+            throw new NullPointerException("Given dyna folder string is null or empty");
+        }
+
+        this.geocpmEinFolder = geocpmEinFolder;
+        this.dynaEinFolder = dynaEinFolder;
     }
 
     //~ Methods ----------------------------------------------------------------
@@ -316,8 +355,8 @@ public class GeoCPMExport {
             final String qIn = this.handleValue(result.getString("q_in"));
             final String qOut = this.handleValue(result.getString("q_out"));
 
-            this.geocpmEinFolder = this.handleValue(result.getString("geocpm_ein_folder"));
-            this.dynaEinFolder = this.handleValue(result.getString("dyna_ein_folder"));
+//            this.geocpmEinFolder = this.handleValue(result.getString("geocpm_ein_folder"));
+//            this.dynaEinFolder = this.handleValue(result.getString("dyna_ein_folder"));
 
             final char YES = 'y';
             final char NO = 'n';
@@ -391,6 +430,20 @@ public class GeoCPMExport {
                 x = result.getBigDecimal(2);
                 y = result.getBigDecimal(3);
                 z = result.getBigDecimal(4);
+                
+                // Finde alle zu ändernden Punkte und verändere die Höhe, je nach Typ
+
+                final Map deltaSurfaceData = this.deltaSurfaceMapping.get(index);
+                if ((deltaSurfaceData != null) && !deltaSurfaceData.isEmpty()) {
+                    final Iterator<BigDecimal> it = deltaSurfaceData.keySet().iterator();
+                    final BigDecimal newHeight = (BigDecimal)it.next();
+                    final Boolean isHeightFix = (Boolean)deltaSurfaceData.get(newHeight);
+                    if (isHeightFix.booleanValue()) {
+                        z = newHeight;
+                    } else {
+                        z = z.add(newHeight);
+                    }
+                }
 
                 formattedZ = this.handleValue(DCF3, z);
 
@@ -1071,6 +1124,49 @@ public class GeoCPMExport {
                 }
             }
         } catch (final Exception e) {
+            LOG.error(e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
+
+        prepareDeltaSurfaces(stmt);
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   stmt  DOCUMENT ME!
+     *
+     * @throws  RuntimeException  DOCUMENT ME!
+     */
+    private void prepareDeltaSurfaces(final Statement stmt) {
+        // Finde alle Punkte die innerhalb der DeltaSurface-Polygone einer DeltaConfiguration liegen
+
+        final ResultSet deltaSurfaces;
+
+        try {
+            final StringBuilder query = new StringBuilder();
+            query.append("Select gp.index as gp_index, ds.height as ds_height, ds.sea_type as fixed_height ");
+            query.append("from delta_surface ds, geocpm_point gp");
+            query.append(" where ");
+            query.append("ds.delta_configuration = ").append(this.deltaConfigId);
+            query.append(" AND ");
+            query.append("ds.original_geom  && gp.geom");
+            query.append(" AND ");
+            query.append("st_intersects(ds.original_geom, gp.geom)");
+
+            deltaSurfaces = stmt.executeQuery(query.toString());
+
+            while (deltaSurfaces.next()) {
+                final String gpIndex = deltaSurfaces.getString("gp_index");
+                final BigDecimal dsHeight = deltaSurfaces.getBigDecimal("ds_height");
+                final Boolean isDsHeightFixed = deltaSurfaces.getBoolean("fixed_height");
+
+                final Map<BigDecimal, Boolean> dsData = new HashMap<BigDecimal, Boolean>();
+                dsData.put(dsHeight, isDsHeightFixed);
+
+                this.deltaSurfaceMapping.put(gpIndex, dsData);
+            }
+        } catch (Exception e) {
             LOG.error(e.getMessage(), e);
             throw new RuntimeException(e);
         }
