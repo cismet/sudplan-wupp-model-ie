@@ -79,8 +79,8 @@ public class ImportExportTest
     private static final String GEOCPMI_D = "GEOCPMI.D";
     private static final String GEOCPMS_D = "GEOCPMS.D";
     
-    private static final String DB_USER   = "postgres";
-    private static final String DB_PWD    = "cismetz12";
+    private static final String DB_USER   = "";
+    private static final String DB_PWD    = "";
     
     
     private static final String TEST_DB_NAME = "simple_geocpm_test_db3";

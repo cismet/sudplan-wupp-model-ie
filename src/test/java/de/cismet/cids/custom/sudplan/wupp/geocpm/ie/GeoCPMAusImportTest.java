@@ -53,8 +53,8 @@ public class GeoCPMAusImportTest
 
     private static final String TEST_GEOCPM_FILE  = "GeoCPM.ein";
     
-    private static final String DB_USER   = "postgres";
-    private static final String DB_PWD    = "cismetz12";
+    private static final String DB_USER   = "";
+    private static final String DB_PWD    = "";
     
     
     private static final String TEST_DB_NAME = "simple_geocpm_test_db";
@@ -62,10 +62,10 @@ public class GeoCPMAusImportTest
     
     
     
-    private static final String RESTURL   = "http://sudplanwp6.cismet.de/geoserver";
-    private static final String RESTUSER  = "admin";
-    private static final String RESTPW    = "cismetz12";
-    private static final String WORKSPACE = "sudplan"; 
+    private static final String RESTURL   = "";
+    private static final String RESTUSER  = "";
+    private static final String RESTPW    = "";
+    private static final String WORKSPACE = ""; 
     
     
     public GeoCPMAusImportTest() {

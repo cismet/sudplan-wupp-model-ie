@@ -9,7 +9,6 @@ package de.cismet.cids.custom.sudplan.wupp.geocpm.ie;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -1262,31 +1261,5 @@ public class GeoCPMExport {
         final FileOutputStream fout = new FileOutputStream(outFile);
         fout.write(Base64.decodeBase64(base64Encoding.getBytes()));
         fout.close();
-    }
-
-    /**
-     * DOCUMENT ME!
-     *
-     * @param   args  DOCUMENT ME!
-     *
-     * @throws  Exception  DOCUMENT ME!
-     */
-    public static void main(final String[] args) throws Exception {
-        final Properties p = new Properties();
-        p.put("log4j.appender.Remote", "org.apache.log4j.net.SocketAppender"); // NOI18N
-        p.put("log4j.appender.Remote.remoteHost", "localhost");                // NOI18N
-        p.put("log4j.appender.Remote.port", "4445");                           // NOI18N
-        p.put("log4j.appender.Remote.locationInfo", "true");                   // NOI18N
-        p.put("log4j.rootLogger", "ALL,Remote");                               // NOI18N
-        PropertyConfigurator.configure(p);
-
-        final GeoCPMExport exporter = new GeoCPMExport(
-                1,
-                new File("/tmp/GeoCPM_be_test.ein"),
-                "postgres",
-                "cismetz12",
-                "jdbc:postgresql://192.168.100.12/wp6_db");
-
-        exporter.doExport();
     }
 }

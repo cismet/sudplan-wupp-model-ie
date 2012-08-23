@@ -169,90 +169,6 @@ public class GeoCPMImport {
     /**
      * DOCUMENT ME!
      *
-     * @param   args  DOCUMENT ME!
-     *
-     * @throws  Exception  DOCUMENT ME!
-     */
-    public static void main(final String[] args) throws Exception {
-//        final Properties p = new Properties();
-//        p.put("log4j.appender.Remote", "org.apache.log4j.net.SocketAppender"); // NOI18N
-//        p.put("log4j.appender.Remote.remoteHost", "localhost");                // NOI18N
-//        p.put("log4j.appender.Remote.port", "4445");                           // NOI18N
-//        p.put("log4j.appender.Remote.locationInfo", "true");                   // NOI18N
-//        p.put("log4j.rootLogger", "ALL,Remote");                               // NOI18N
-//        PropertyConfigurator.configure(p);
-//
-//        final GeoCPMImport importer = new GeoCPMImport(
-//                new FileInputStream("/Users/mscholl/projects/sudplan/wupp/geocpm_dyna_bruchkanten/GeoCPM.ein"),
-//                "postgres",
-//                "cismetz12",
-//                "jdbc:postgresql://192.168.100.12/sudplan_wupp");
-//
-//        System.out.println(importer.doImport());
-
-//        final BufferedReader br = new BufferedReader(new FileReader("/Users/mscholl/Desktop/bk_connect_test"));
-//        String line;
-//        StringBuilder sb = new StringBuilder();
-//        final GeoCPMImport gi = new GeoCPMImport(new ByteArrayInputStream(new byte[] {}), null, null, null);
-//        int count = 0;
-//        while ((line = br.readLine()) != null) {
-//            gi.readBKConnect(sb, 1, line);
-//            if ((++count % 10000) == 0) {
-//                sb = new StringBuilder();
-//            }
-//        }
-//
-//        System.out.println("____");
-//        System.out.println("----");
-//
-//        System.out.println(sb.toString());
-
-//        System.out.println("URL: " + GeoCPMImport.class.getResource(DYNA_FORM));
-//
-//        final String test = "Ett' läuft";
-//
-//        final String base64String = new String(Base64.encodeBase64(test.getBytes()));
-//        final String decoded = new String(Base64.decodeBase64(base64String.getBytes()));
-//
-//        System.out.println("base64 encoded: " + base64String);
-//        System.out.println("base64 decoded: " + decoded);
-
-//        final String[] split = sb.toString().split(";");
-//
-//        Class.forName("org.postgresql.Driver"); // NOI18N
-//        final Connection con = DriverManager.getConnection(
-//                "jdbc:postgresql://192.168.100.12/testt",
-//                "postgres",
-//                "cismetz12");
-//        con.setAutoCommit(true);
-//        final Statement s = con.createStatement();
-//        int i = 0;
-//        for (final String sql : split) {
-//            s.executeUpdate(sql);
-//            ResultSet set = null;
-//            try {
-//                set = s.executeQuery(
-//                        "select isvalid(geo_field), astext(geo_field) from geom where id = (select max(id) from geom);");
-//                set.next();
-//                final boolean valid = set.getBoolean(1);
-//                if (!valid) {
-//                    System.out.println("invalid sql" + sql);
-//                }
-//            } catch (final Exception e) {
-//                i++;
-//                System.out.println(i + ": could not check validity: " + sql);
-//                e.printStackTrace();
-//            } finally {
-//                if (set != null) {
-//                    set.close();
-//                }
-//            }
-//        }
-    }
-
-    /**
-     * DOCUMENT ME!
-     *
      * @return  DOCUMENT ME!
      *
      * @throws  SQLException    DOCUMENT ME!
@@ -950,7 +866,7 @@ public class GeoCPMImport {
 
         try {
             final byte[] buffer = new byte[1024]; // buffer of size 1kb
-            int numberOfReadBytes = -1;
+            int numberOfReadBytes;
 
             while ((numberOfReadBytes = in.read(buffer)) != -1) {
                 bout.write(buffer, 0, numberOfReadBytes);
