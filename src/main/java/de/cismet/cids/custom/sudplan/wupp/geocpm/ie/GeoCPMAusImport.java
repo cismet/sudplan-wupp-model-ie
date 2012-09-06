@@ -117,6 +117,7 @@ public final class GeoCPMAusImport {
     private int configId;
     private File infoFile;
     private File maxFile;
+    private File resultsFolder;
 
     private final String user;
     private final String password;
@@ -185,6 +186,17 @@ public final class GeoCPMAusImport {
 
     //~ Methods ----------------------------------------------------------------
 
+    
+    public File getResultsFolder(){
+        if(this.resultsFolder == null)
+        {
+            throw new IllegalStateException("Result folder is not available," + 
+                                            " if no results import has been performed");
+        }
+        
+        return this.resultsFolder;
+    }
+    
     /**
      * DOCUMENT ME!
      *
@@ -269,14 +281,10 @@ public final class GeoCPMAusImport {
 
         final String geocpmFolder = prop.getProperty(GeoCPMExport.PROP_GEOCPM_FOLDER);
         
-        final File resultsFolderFile = this.findResultsFolder(new File(this.targetFolder, geocpmFolder));
+        this.resultsFolder = this.findResultsFolder(new File(this.targetFolder, geocpmFolder));
         
-        if (!resultsFolderFile.exists()) {
-            throw new RuntimeException("There is no results folder named " + resultsFolderFile);
-        }
-
-        this.infoFile = new File(resultsFolderFile, INFO_FILE);
-        this.maxFile = new File(resultsFolderFile, MAX_FILE);
+        this.infoFile = new File(this.resultsFolder, INFO_FILE);
+        this.maxFile = new File(this.resultsFolder, MAX_FILE);
 
         this.checkFile(this.infoFile);
         this.checkFile(this.maxFile);
