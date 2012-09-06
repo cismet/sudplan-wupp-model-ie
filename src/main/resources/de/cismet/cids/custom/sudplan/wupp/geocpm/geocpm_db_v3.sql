@@ -1,5 +1,4 @@
-﻿SELECT DropGeometryColumn('public', 'geocpm_point', 'geom');
-SELECT DropGeometryColumn('public', 'geocpm_triangle', 'geom');
+DROP VIEW  IF EXISTS geocpm_breaking_edge_layer;
 
 DROP TABLE IF EXISTS geocpm_jt_manhole_triangle;
 DROP TABLE IF EXISTS geocpm_manhole;
@@ -27,7 +26,7 @@ DROP SEQUENCE IF EXISTS delta_breaking_edge_seq;
 DROP SEQUENCE IF EXISTS delta_configuration_delta_breaking_edge_seq;
 DROP SEQUENCE IF EXISTS delta_configuration_seq;
 
-DROP TABLE IF EXISTS drainevent;
+DROP TABLE IF EXISTS    rainevent;
 DROP SEQUENCE IF EXISTS rainevent_seq;
 
 
@@ -202,6 +201,12 @@ CREATE TABLE geocpm_jt_manhole_triangle (
     FOREIGN KEY (geocpm_manhole_id) REFERENCES geocpm_manhole,
     FOREIGN KEY (geocpm_triangle_id) REFERENCES geocpm_triangle
 );
+
+
+CREATE VIEW geocpm_breaking_edge_layer AS 
+    SELECT    be.height, be.type, st_transform(st_setsrid(g.geo_field, 4326), 31466) AS geo_field
+    FROM      geocpm_breaking_edge be
+    LEFT JOIN geom g ON g.id = be.geom;
 
 -------------------------------------------------------------------------
 ------------- GeoCPM Model Output Import ---------------------------------------
