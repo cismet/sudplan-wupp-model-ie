@@ -42,6 +42,7 @@ import java.util.regex.Pattern;
 
 import de.cismet.cids.custom.sudplan.geoserver.AttributesAwareGSFeatureTypeEncoder;
 import de.cismet.cids.custom.sudplan.geoserver.GSAttributeEncoder;
+import java.io.*;
 
 /**
  * DOCUMENT ME!
@@ -79,11 +80,6 @@ public final class GeoCPMAusImport {
 
     private static final String VIEW_NAME_BASE = "view_geocpm_aus_config_";
 
-    /**
-     * (Most likely, ) there is one results folder for each rain model (0001, 0002, ...). As we assume that there is
-     * only one rain model, we hard-code this results folder.
-     */
-    public static final String RESULTS_FOLDER = "0001";
 
     private static final String CRS = "               PROJCS[&quot;DHDN / 3-degree Gauss-Kruger zone 2&quot;, "
                 + "  GEOGCS[&quot;DHDN&quot;, "
@@ -204,6 +200,56 @@ public final class GeoCPMAusImport {
         return VIEW_NAME_BASE + this.configId;
     }
 
+    
+    private File findResultsFolder(final File baseFolder) 
+    {
+        if(! baseFolder.isDirectory())
+        {
+            throw new IllegalArgumentException("base folder " + 
+                                               baseFolder + 
+                                               " does not exist");
+        }
+        
+        // determine possible result folders
+        
+        final File[] possibleResultFolders = baseFolder.listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(final File file, final String fileName) {
+                return file.isDirectory() && fileName.matches("\\d+");
+            }
+        });
+        
+        // find folder with file name representing the largest number among
+        // all possible result folders
+        
+        if(possibleResultFolders.length == 0)
+        {
+            throw new IllegalArgumentException("Base folder " + baseFolder +  
+                                               " does not contain a result folder");
+        }
+        
+        if(possibleResultFolders.length == 1)
+        {
+            return possibleResultFolders[0];
+        }
+        else
+        {
+            File f = possibleResultFolders[0];
+        
+            for(int i = 1; i < possibleResultFolders.length; i++)
+            {
+                if(possibleResultFolders[i].getName().compareTo(f.getName()) > 0)
+                {
+                    f = possibleResultFolders[i];
+                }
+            }
+        
+            return f;
+        }
+
+    }
+    
+    
     /**
      * DOCUMENT ME!
      *
@@ -222,7 +268,9 @@ public final class GeoCPMAusImport {
         this.configId = Integer.parseInt(prop.getProperty(GeoCPMExport.PROP_CONFIG_ID));
 
         final String geocpmFolder = prop.getProperty(GeoCPMExport.PROP_GEOCPM_FOLDER);
-        final File resultsFolderFile = new File(new File(this.targetFolder, geocpmFolder), RESULTS_FOLDER);
+        
+        final File resultsFolderFile = this.findResultsFolder(new File(this.targetFolder, geocpmFolder));
+        
         if (!resultsFolderFile.exists()) {
             throw new RuntimeException("There is no results folder named " + resultsFolderFile);
         }
