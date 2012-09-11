@@ -77,6 +77,7 @@ CREATE TABLE geocpm_point (
     FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration
 );
 SELECT AddGeometryColumn('public', 'geocpm_point', 'geom', 31466, 'POINT', 3);
+CREATE INDEX ON geocpm_point (index);
 
 CREATE TABLE geocpm_triangle (
     id BIGSERIAL PRIMARY KEY,
