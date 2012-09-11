@@ -53,7 +53,7 @@ CREATE TABLE geocpm_configuration (
     geocpmn_d TEXT,
     geocpm_ein_folder VARCHAR(50),
     dyna_ein_folder VARCHAR(50),
-
+    investigation_area integer,
 
     FOREIGN KEY (geom) REFERENCES geom
 );
