@@ -24,44 +24,47 @@ DROP SEQUENCE IF EXISTS delta_configuration_delta_breaking_edge_seq;
 DROP SEQUENCE IF EXISTS delta_configuration_seq;
 
 
-
+CREATE SEQUENCE geocpm_configuration_seq MINVALUE 1 START 1;
 
 -- we use an integer pkey so that there won't be an issue with cids
 -- we don't use serial because of cids, too
-CREATE TABLE geocpm_configuration (
-    id INTEGER PRIMARY KEY,
-    calc_begin TIMESTAMP,
-    calc_end TIMESTAMP,
-    write_node BOOLEAN,
-    write_edge BOOLEAN,
-    last_values BOOLEAN,
-    save_marked BOOLEAN,
-    merge_triangles BOOLEAN,
-    min_calc_triangle_size NUMERIC(20,8),
-    time_step_restriction BOOLEAN,
-    save_velocity_curves BOOLEAN,
-    save_flow_curves BOOLEAN,
-    result_save_limit NUMERIC(20,8),
-    number_of_threads INTEGER,
-    q_in INTEGER,
-    q_out INTEGER,
-    geom INTEGER,
-    dyna_form TEXT,
-    geocpmi_d TEXT,
-    geocpmf_d TEXT,
-    geocpms_d TEXT,
-    geocpmn_d TEXT,
-    geocpm_ein_folder VARCHAR(50),
-    dyna_ein_folder VARCHAR(50),
-    investigation_area integer,
+CREATE TABLE geocpm_configuration
+(
+  id integer NOT NULL DEFAULT nextval('geocpm_configuration_seq'::regclass),
+  calc_begin timestamp without time zone,
+  calc_end timestamp without time zone,
+  write_node boolean,
+  write_edge boolean,
+  last_values boolean,
+  save_marked boolean,
+  merge_triangles boolean,
+  min_calc_triangle_size numeric(20,8),
+  time_step_restriction boolean,
+  save_velocity_curves boolean,
+  save_flow_curves boolean,
+  result_save_limit numeric(20,8),
+  number_of_threads integer,
+  q_in integer,
+  q_out integer,
+  geom integer,
+  dyna_form text,
+  geocpmi_d text,
+  geocpmf_d text,
+  geocpms_d text,
+  geocpm_ein_folder character varying(50),
+  dyna_ein_folder character varying(50),
+  geocpmn_d text,
+  name character varying(200),
+  description text,
+  investigation_area integer,
+  CONSTRAINT geocpm_configuration_pkey PRIMARY KEY (id ),
+  CONSTRAINT geocpm_configuration_geom_fkey FOREIGN KEY (geom)
+      REFERENCES geom (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION
+)
 
-    FOREIGN KEY (geom) REFERENCES geom
-);
+
 -- we use the geom table of cids
-
--- this is for cids
-CREATE SEQUENCE geocpm_configuration_seq MINVALUE 1 START 1;
-ALTER TABLE geocpm_configuration ALTER COLUMN id SET DEFAULT nextval('geocpm_configuration_seq');
 
 CREATE TABLE geocpm_point (
     id BIGSERIAL PRIMARY KEY,
