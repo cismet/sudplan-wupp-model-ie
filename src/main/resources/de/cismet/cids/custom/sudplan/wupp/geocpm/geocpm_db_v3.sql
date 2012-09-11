@@ -7,27 +7,21 @@ DROP TABLE IF EXISTS geocpm_breaking_edge;
 DROP TABLE IF EXISTS geocpm_source_drain;
 DROP TABLE IF EXISTS geocpm_curve_value;
 DROP TABLE IF EXISTS geocpm_curve;
-DROP TABLE IF EXISTS geocpm_triangle;
-DROP TABLE IF EXISTS geocpm_point;
-DROP TABLE IF EXISTS geocpm_configuration;
 DROP TABLE IF EXISTS geocpm_aus_info;
 DROP TABLE IF EXISTS geocpm_aus_max;
-
-DROP SEQUENCE IF EXISTS geocpm_configuration_seq;
 DROP SEQUENCE IF EXISTS geocpm_breaking_edge_seq;
 DROP INDEX    IF EXISTS geocpm_triangle_index_idx;
-
-
+DROP TABLE IF EXISTS geocpm_triangle;
+DROP INDEX    IF EXISTS geocpm_point_index_idx;
+DROP TABLE IF EXISTS geocpm_point;
+DROP TABLE IF EXISTS geocpm_configuration;
+DROP SEQUENCE IF EXISTS geocpm_configuration_seq;
 DROP TABLE IF EXISTS delta_configuration;
 DROP TABLE IF EXISTS delta_breaking_edge;
 DROP TABLE IF EXISTS delta_configuration_delta_breaking_edge;
-
 DROP SEQUENCE IF EXISTS delta_breaking_edge_seq;
 DROP SEQUENCE IF EXISTS delta_configuration_delta_breaking_edge_seq;
 DROP SEQUENCE IF EXISTS delta_configuration_seq;
-
-DROP TABLE IF EXISTS    rainevent;
-DROP SEQUENCE IF EXISTS rainevent_seq;
 
 
 
@@ -77,7 +71,7 @@ CREATE TABLE geocpm_point (
     FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration
 );
 SELECT AddGeometryColumn('public', 'geocpm_point', 'geom', 31466, 'POINT', 3);
-CREATE INDEX ON geocpm_point (index);
+CREATE INDEX geocpm_point_index_idx ON geocpm_point (index);
 
 CREATE TABLE geocpm_triangle (
     id BIGSERIAL PRIMARY KEY,
@@ -304,38 +298,3 @@ CREATE TABLE delta_configuration_delta_breaking_edge
   delta_breaking_edge integer NOT NULL,
   CONSTRAINT delta_configuration_delta_breaking_edge_pkey PRIMARY KEY (id )
 );
-
-
-
---------------------------------
--- rainevent
---------------------------------
-
-CREATE SEQUENCE rainevent_seq
-   START WITH 1
-   INCREMENT BY 1
-   NO MINVALUE
-   NO MAXVALUE
-   CACHE 1;
-
-
- ALTER TABLE public.rainevent_seq OWNER TO postgres;
-
---
--- TOC entry 283 (class 1259 OID 26684)
--- Dependencies: 3279 3280 6
--- Name: rainevent; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
---
-
- CREATE TABLE rainevent (
-    data text,
-    name character varying(200) NOT NULL,
-    id integer DEFAULT nextval('rainevent_seq'::regclass) NOT NULL,
-    geom integer,
-    forecast boolean DEFAULT false NOT NULL,
-    description text,
-    "interval" integer
-);
-
-
-ALTER TABLE public.rainevent OWNER TO postgres;
