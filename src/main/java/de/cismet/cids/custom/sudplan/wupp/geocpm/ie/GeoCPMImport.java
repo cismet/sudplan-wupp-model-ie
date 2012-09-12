@@ -88,9 +88,18 @@ public class GeoCPMImport {
 
     public static final String FIELD_SEP = "     "; // NOI18N
 
-    public static final String NULL_TOKEN_FILE = "-1\\.#R";
-    public static final String NULL_TOKEN_DB = "NULL";
+    public static final String NULL_TOKEN_FILE = "-1\\.#R";// NOI18N
+    public static final String NULL_TOKEN_DB = "NULL";// NOI18N
 
+    
+    private static final String RAIN_ANFA_RECORD_PREFIX = "ANFA:";// NOI18N
+    private static final String RAIN_ENDE_RECORD_PREFIX = "ENDE:";// NOI18N
+    
+    
+    private static final String RAIN_ANFA_RECORD = RAIN_ANFA_RECORD_PREFIX + "1";// NOI18N
+    private static final String RAIN_ENDE_RECORD = RAIN_ENDE_RECORD_PREFIX + "99";// NOI18N
+    
+    
     //~ Instance fields --------------------------------------------------------
 
     /**
@@ -913,10 +922,14 @@ public class GeoCPMImport {
             final ByteArrayOutputStream bout = new ByteArrayOutputStream(500 * 1024); // preallocate 500kb
             final BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(bout, GeoCPMExport.DYNA_ENC));
 
+            
+            boolean isRainData = false;
+            
             String line;
             for (int i = 0; i < numLines; i++) {
                 line = originalDynaLines.get(i);
-                if (line.startsWith("07")) {
+                if (line.startsWith("07")) 
+                {
                     // put placeholder for new rain data generated from a Rainevent
                     writer.write("{0}");
                     // NOTE: no linefeed after placeholder!
@@ -928,7 +941,26 @@ public class GeoCPMImport {
 
                     writer.write(line);
                     writer.newLine();
-                } else {
+                    
+                    isRainData = true;
+                }
+                else if(isRainData && line.startsWith(RAIN_ANFA_RECORD_PREFIX))
+                {
+                    // replace current rain ANFA record with ANFA record having 
+                    // the smallest possible number
+                    writer.write(RAIN_ANFA_RECORD);
+                    writer.newLine();
+                }
+                else if(isRainData && line.startsWith(RAIN_ENDE_RECORD_PREFIX))
+                {
+                    // replace current rain ENDE record with ENDE record having 
+                    // the largest possible number
+                    writer.write(RAIN_ENDE_RECORD);
+                    writer.newLine();
+                    isRainData = false;
+                }
+                else 
+                {
                     writer.write(line);
                     if (i < (numLines - 1)) {
                         writer.newLine();
