@@ -371,7 +371,7 @@ public class GeoCPMExport {
         ResultSet result = null;
         try {
             result = stmt.executeQuery("SELECT index, ST_X(geom), ST_Y(geom), ST_Z(geom), "
-                            + " ST_X(ST_TRANSFORM(geom, 4326)), ST_Y(ST_TRANSFORM(geom, 4326)), ST_Z(ST_TRANSFORM(geom, 4326)) "
+                            + " ST_X(ST_TRANSFORM(geom, 4326)), ST_Y(ST_TRANSFORM(geom, 4326)) "
                             + " FROM geocpm_point where geocpm_configuration_id = " + this.configId
                             + " ORDER BY index");
 
@@ -403,7 +403,6 @@ public class GeoCPMExport {
 
                 x = result.getBigDecimal(5);
                 y = result.getBigDecimal(6);
-                z = result.getBigDecimal(7);
 
                 tmpContent3D.append(this.handleValue(index))
                         .append(FIELD_SEP)
