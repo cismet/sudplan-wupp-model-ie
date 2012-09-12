@@ -11,8 +11,12 @@ import it.geosolutions.geoserver.rest.GeoServerRESTPublisher;
 import it.geosolutions.geoserver.rest.encoder.GSLayerEncoder;
 import it.geosolutions.geoserver.rest.encoder.GSResourceEncoder.ProjectionPolicy;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.filefilter.FileFileFilter;
 import org.apache.log4j.Logger;
 
+import java.io.*;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -39,10 +43,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import de.cismet.cids.custom.sudplan.geoserver.AttributesAwareGSFeatureTypeEncoder;
 import de.cismet.cids.custom.sudplan.geoserver.GSAttributeEncoder;
-import java.io.*;
 
 /**
  * DOCUMENT ME!
@@ -79,7 +84,6 @@ public final class GeoCPMAusImport {
     private static final String GEOSERVER_SLD = "geocpm_water_level";
 
     private static final String VIEW_NAME_BASE = "view_geocpm_aus_config_";
-
 
     private static final String CRS = "               PROJCS[&quot;DHDN / 3-degree Gauss-Kruger zone 2&quot;, "
                 + "  GEOGCS[&quot;DHDN&quot;, "
@@ -118,6 +122,7 @@ public final class GeoCPMAusImport {
     private File infoFile;
     private File maxFile;
     private File resultsFolder;
+    private File geocpm3DFolder;
 
     private final String user;
     private final String password;
@@ -186,17 +191,22 @@ public final class GeoCPMAusImport {
 
     //~ Methods ----------------------------------------------------------------
 
-    
-    public File getResultsFolder(){
-        if(this.resultsFolder == null)
-        {
-            throw new IllegalStateException("Result folder is not available," + 
-                                            " if no results import has been performed");
+    /**
+     * DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  IllegalStateException  DOCUMENT ME!
+     */
+    public File getResultsFolder() {
+        if (this.resultsFolder == null) {
+            throw new IllegalStateException("Result folder is not available,"
+                        + " if no results import has been performed");
         }
-        
+
         return this.resultsFolder;
     }
-    
+
     /**
      * DOCUMENT ME!
      *
@@ -212,61 +222,61 @@ public final class GeoCPMAusImport {
         return VIEW_NAME_BASE + this.configId;
     }
 
-    
-    private File findResultsFolder(final File baseFolder) 
-    {
-        if(! baseFolder.isDirectory())
-        {
-            throw new IllegalArgumentException("base folder " + 
-                                               baseFolder + 
-                                               " does not exist");
-        }
-        
-        // determine possible result folders
-        
-        final File[] possibleResultFolders = baseFolder.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(final File file, final String fileName) {
-                return file.isDirectory() && fileName.matches("\\d+");
-            }
-        });
-        
-        // find folder with file name representing the largest number among
-        // all possible result folders
-        
-        if(possibleResultFolders.length == 0)
-        {
-            throw new IllegalArgumentException("Base folder " + baseFolder +  
-                                               " does not contain a result folder");
-        }
-        
-        if(possibleResultFolders.length == 1)
-        {
-            return possibleResultFolders[0];
-        }
-        else
-        {
-            File f = possibleResultFolders[0];
-        
-            for(int i = 1; i < possibleResultFolders.length; i++)
-            {
-                if(possibleResultFolders[i].getName().compareTo(f.getName()) > 0)
-                {
-                    f = possibleResultFolders[i];
-                }
-            }
-        
-            return f;
-        }
-
-    }
-    
-    
     /**
      * DOCUMENT ME!
      *
-     * @throws  IOException       DOCUMENT ME!
-     * @throws  RuntimeException  DOCUMENT ME!
+     * @param   baseFolder  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  IllegalArgumentException  DOCUMENT ME!
+     */
+    private File findResultsFolder(final File baseFolder) {
+        if (!baseFolder.isDirectory()) {
+            throw new IllegalArgumentException("base folder "
+                        + baseFolder
+                        + " does not exist");
+        }
+
+        // determine possible result folders
+
+        final File[] possibleResultFolders = baseFolder.listFiles(new FilenameFilter() {
+
+                    @Override
+                    public boolean accept(final File file, final String fileName) {
+                        return file.isDirectory() && fileName.matches("\\d+");
+                    }
+                });
+
+        // find folder with file name representing the largest number among
+        // all possible result folders
+
+        if (possibleResultFolders.length == 0) {
+            throw new IllegalArgumentException("Base folder " + baseFolder
+                        + " does not contain a result folder");
+        }
+
+        if (possibleResultFolders.length == 1) {
+            return possibleResultFolders[0];
+        } else {
+            File f = possibleResultFolders[0];
+
+            for (int i = 1; i < possibleResultFolders.length; i++) {
+                if (possibleResultFolders[i].getName().compareTo(f.getName()) > 0) {
+                    f = possibleResultFolders[i];
+                }
+            }
+
+            return f;
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @throws  IOException            DOCUMENT ME!
+     * @throws  IllegalStateException  DOCUMENT ME!
+     * @throws  RuntimeException       DOCUMENT ME!
      */
     private void loadExportMetaData() throws IOException {
         LOG.info("Start loading export meta data...");
@@ -280,9 +290,22 @@ public final class GeoCPMAusImport {
         this.configId = Integer.parseInt(prop.getProperty(GeoCPMExport.PROP_CONFIG_ID));
 
         final String geocpmFolder = prop.getProperty(GeoCPMExport.PROP_GEOCPM_FOLDER);
-        
+
+        final String geocpm3DFolderName = prop.getProperty(GeoCPMExport.PROP_GEOCPM_3D_FOLDER);
+        this.geocpm3DFolder = new File(this.targetFolder, geocpm3DFolderName);
+        if (this.geocpm3DFolder.exists()) {
+            throw new IllegalStateException("Folder "
+                        + geocpm3DFolderName
+                        + " does already exist");
+        }
+
+        if (!this.geocpm3DFolder.mkdir()) {
+            throw new RuntimeException("Cannot create GeoCPM 3D folder: "
+                        + geocpmFolder);
+        }
+
         this.resultsFolder = this.findResultsFolder(new File(this.targetFolder, geocpmFolder));
-        
+
         this.infoFile = new File(this.resultsFolder, INFO_FILE);
         this.maxFile = new File(this.resultsFolder, MAX_FILE);
 
@@ -497,6 +520,34 @@ public final class GeoCPMAusImport {
     }
 
     /**
+     * DOCUMENT ME!
+     *
+     * @throws  Exception  DOCUMENT ME!
+     */
+    private void prepareGeoCPM3Data() throws Exception {
+        // copy result files to GeoCPM 3D folder
+        FileUtils.copyFileToDirectory(this.maxFile, this.geocpm3DFolder);
+        FileUtils.copyFileToDirectory(this.infoFile, this.geocpm3DFolder);
+
+        // create zip file GeoCPM 3D folder
+        final ZipOutputStream out = new ZipOutputStream(new FileOutputStream(
+                    this.geocpm3DFolder.getAbsolutePath()
+                            + ".zip"));
+
+        FileInputStream fin;
+
+        for (final File file : this.geocpm3DFolder.listFiles((FileFilter)FileFileFilter.FILE)) {
+            out.putNextEntry(new ZipEntry(file.getName()));
+            fin = new FileInputStream(file);
+            IOUtils.copy(fin, out);
+            out.closeEntry();
+            IOUtils.closeQuietly(fin);
+        }
+
+        IOUtils.closeQuietly(out);
+    }
+
+    /**
      * Imports the GeoCPMMax.aus file.
      *
      * @param   con  DOCUMENT ME!
@@ -657,6 +708,20 @@ public final class GeoCPMAusImport {
                             importGeoCPMMax(finalCon);
                         } catch (final Exception ex) {
                             LOG.error("An error occurred while importing max file", ex);
+                            throw new RuntimeException(ex);
+                        }
+                    }
+                });
+
+            // start thread for creating preparing GeoCPM 3D data
+            execService.submit(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        try {
+                            prepareGeoCPM3Data();
+                        } catch (final Exception ex) {
+                            LOG.error("An error occurred while preparing GeoCPM 3D data", ex);
                             throw new RuntimeException(ex);
                         }
                     }

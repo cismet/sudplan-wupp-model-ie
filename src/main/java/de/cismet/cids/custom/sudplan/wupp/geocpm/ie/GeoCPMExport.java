@@ -102,6 +102,8 @@ public class GeoCPMExport {
     public static final String PROP_CONFIG_ID = "configuration_id";
     public static final String PROP_GEOCPM_FOLDER = "geocpm_folder";
     public static final String PROP_DYNA_FOLDER = "dyna_folder";
+    public static final String GEOCPM_3D_FOLDER = "geocpm3d";
+    public static final String PROP_GEOCPM_3D_FOLDER = GEOCPM_3D_FOLDER;
 
     // preallocate space for 10 records
     private static final int DYNA_ALL_RECORDS_INIT_SIZE = 1510;
@@ -124,6 +126,7 @@ public class GeoCPMExport {
     private final transient int deltaConfigId;
 
     private final transient StringBuilder prepContent;
+    private final transient StringBuilder prepContent3D;
 
     private final transient String user;
     private final transient String password;
@@ -198,6 +201,7 @@ public class GeoCPMExport {
         this.deltaConfigId = deltaConfigId;
         this.outFolder = outFolder;
         this.prepContent = new StringBuilder(30 * 1024 * 1024); // allocate 60 MB (1 char = 2 Byte)
+        this.prepContent3D = new StringBuilder(this.prepContent.capacity());
         this.user = user;
         this.password = password;
         this.dbUrl = dbUrl;
@@ -242,6 +246,17 @@ public class GeoCPMExport {
      *
      * @return  DOCUMENT ME!
      */
+    private String handleValue(final BigDecimal value) {
+        return (value == null) ? NULL_TOKEN_FILE : value.toPlainString();
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param   value  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     */
     private String handleValue(final Timestamp value) {
         return (value == null) ? NULL_TOKEN_FILE : this.dateFormat.format(value);
     }
@@ -255,6 +270,7 @@ public class GeoCPMExport {
         LOG.info("Start creation of export meta data...");
         final Properties prop = new Properties();
         prop.put(PROP_CONFIG_ID, String.valueOf(this.configId));
+        prop.put(PROP_GEOCPM_3D_FOLDER, GEOCPM_3D_FOLDER);
         prop.put(PROP_GEOCPM_FOLDER, (this.geocpmEinFolder == null) ? "unknown" : this.geocpmEinFolder);
         prop.put(PROP_DYNA_FOLDER, (this.dynaEinFolder == null) ? "unknown" : this.dynaEinFolder);
 
@@ -332,6 +348,8 @@ public class GeoCPMExport {
             this.prepContent.append(Q_IN).append(COL).append(qIn).append(EOL);
             this.prepContent.append(Q_OUT).append(COL).append(qOut).append(EOL);
             this.prepContent.append(EOL);
+
+            this.prepContent3D.append(this.prepContent);
         } finally {
             result.close();
         }
@@ -352,16 +370,19 @@ public class GeoCPMExport {
         int count = 0;
         ResultSet result = null;
         try {
-            result = stmt.executeQuery("SELECT index, ST_X(geom), ST_Y(geom), ST_Z(geom) "
-                            + "FROM geocpm_point where geocpm_configuration_id = " + this.configId
-                            + "ORDER BY index");
+            result = stmt.executeQuery("SELECT index, ST_X(geom), ST_Y(geom), ST_Z(geom), "
+                            + " ST_X(ST_TRANSFORM(geom, 4326)), ST_Y(ST_TRANSFORM(geom, 4326)), ST_Z(ST_TRANSFORM(geom, 4326)) "
+                            + " FROM geocpm_point where geocpm_configuration_id = " + this.configId
+                            + " ORDER BY index");
 
             BigDecimal x;
             BigDecimal y;
             BigDecimal z;
+
             String index;
 
             final StringBuilder tmpContent = new StringBuilder(this.prepContent.capacity() / 3);
+            final StringBuilder tmpContent3D = new StringBuilder(tmpContent.capacity());
 
             while (result.next()) {
                 index = result.getString(1);
@@ -378,12 +399,32 @@ public class GeoCPMExport {
                         .append(this.handleValue(DCF3, z))
                         .append(EOL);
 
+                // write 3d specific coordinates
+
+                x = result.getBigDecimal(5);
+                y = result.getBigDecimal(6);
+                z = result.getBigDecimal(7);
+
+                tmpContent3D.append(this.handleValue(index))
+                        .append(FIELD_SEP)
+                        .append(this.handleValue(x))
+                        .append(FIELD_SEP)
+                        .append(this.handleValue(y))
+                        .append(FIELD_SEP)
+                        .append(this.handleValue(z))
+                        .append(EOL);
+
                 count++;
             }
 
             this.prepContent.append(SECTION_POINTS).append(' ').append(count).append(EOL);
+            this.prepContent3D.append(SECTION_POINTS).append(' ').append(count).append(EOL);
+
             this.prepContent.append(tmpContent);
+            this.prepContent3D.append(tmpContent3D);
+
             this.prepContent.append(EOL);
+            this.prepContent3D.append(EOL);
         } finally {
             result.close();
         }
@@ -499,6 +540,10 @@ public class GeoCPMExport {
             this.prepContent.append(SECTION_TRIANGLES).append(' ').append(count).append(EOL);
             this.prepContent.append(tmpContent);
             this.prepContent.append(EOL);
+
+            this.prepContent3D.append(SECTION_TRIANGLES).append(' ').append(count).append(EOL);
+            this.prepContent3D.append(tmpContent);
+            this.prepContent3D.append(EOL);
         } finally {
             result.close();
         }
@@ -567,6 +612,9 @@ public class GeoCPMExport {
 
             this.prepContent.append(SECTION_CURVES).append(' ').append(numCurves).append(EOL);
             this.prepContent.append(tmpContent);
+
+            this.prepContent3D.append(SECTION_CURVES).append(' ').append(numCurves).append(EOL);
+            this.prepContent3D.append(tmpContent);
         } finally {
             if (result != null) {
                 result.close();
@@ -623,6 +671,10 @@ public class GeoCPMExport {
             this.prepContent.append(SECTION_SOURCE_DRAIN).append(' ').append(count).append(EOL);
             this.prepContent.append(tmpContent);
             this.prepContent.append(EOL);
+
+            this.prepContent3D.append(SECTION_SOURCE_DRAIN).append(' ').append(count).append(EOL);
+            this.prepContent3D.append(tmpContent);
+            this.prepContent3D.append(EOL);
         } finally {
             result.close();
         }
@@ -696,6 +748,10 @@ public class GeoCPMExport {
             this.prepContent.append(SECTION_MANHOLES).append(' ').append(numManholes).append(EOL);
             this.prepContent.append(tmpFinalContent);
             this.prepContent.append(EOL);
+
+            this.prepContent3D.append(SECTION_MANHOLES).append(' ').append(numManholes).append(EOL);
+            this.prepContent3D.append(tmpFinalContent);
+            this.prepContent3D.append(EOL);
         } finally {
             if (result != null) {
                 result.close();
@@ -734,6 +790,10 @@ public class GeoCPMExport {
             this.prepContent.append(SECTION_MARKED).append(' ').append(count).append(EOL);
             this.prepContent.append(tmpContent);
             this.prepContent.append(EOL);
+
+            this.prepContent3D.append(SECTION_MARKED).append(' ').append(count).append(EOL);
+            this.prepContent3D.append(tmpContent);
+            this.prepContent3D.append(EOL);
         } finally {
             result.close();
         }
@@ -814,6 +874,9 @@ public class GeoCPMExport {
 
             this.prepContent.append(SECTION_BK_CONNECT).append(' ').append(numBKs).append(EOL);
             this.prepContent.append(tmpFinalContent);
+
+            this.prepContent3D.append(SECTION_BK_CONNECT).append(' ').append(numBKs).append(EOL);
+            this.prepContent3D.append(tmpFinalContent);
         } catch (final Exception e) {
             LOG.error("An error occurred while processing BREAKING EADGES information", e);
         } finally {
@@ -1038,6 +1101,7 @@ public class GeoCPMExport {
             deltaDataThread.start();
 
             this.retrieveConfigData(stmt);
+
             this.retrievePoints(stmt);
 
             deltaDataThread.join();
@@ -1049,6 +1113,8 @@ public class GeoCPMExport {
             this.retrieveMarked(stmt);
             // RAINCURVE is not handled in the exporter (see comments in class header)
             this.prepContent.append(SECTION_RAINCURVE).append(" 0").append(EOL).append(EOL);
+            this.prepContent3D.append(SECTION_RAINCURVE).append(" 0").append(EOL).append(EOL);
+
             this.retrieveBKs(stmt);
 
             final File parentFolder = new File(this.outFolder, this.geocpmEinFolder);
@@ -1057,10 +1123,21 @@ public class GeoCPMExport {
                             + " for exported GeoCPM.EIN");
             }
 
-            final FileOutputStream fout = new FileOutputStream(new File(parentFolder, "GeoCPM.EIN"));
-            final BufferedOutputStream bOut = new BufferedOutputStream(fout);
+            FileOutputStream fout = new FileOutputStream(new File(parentFolder, "GeoCPM.EIN"));
+            BufferedOutputStream bOut = new BufferedOutputStream(fout);
 
             bOut.write(this.prepContent.toString().getBytes());
+            bOut.close();
+
+            // write out 3D specific GeoCPM.ein file
+            final File geocpm3DFolder = new File(this.outFolder, GEOCPM_3D_FOLDER);
+            if (!geocpm3DFolder.mkdir()) {
+                throw new RuntimeException("Could not create GeoCPM 3D folder: " + geocpm3DFolder);
+            }
+
+            fout = new FileOutputStream(new File(geocpm3DFolder, "GeoCPM.EIN"));
+            bOut = new BufferedOutputStream(fout);
+            bOut.write(this.prepContent3D.toString().getBytes());
             bOut.close();
 
             this.createExportMetaData();
