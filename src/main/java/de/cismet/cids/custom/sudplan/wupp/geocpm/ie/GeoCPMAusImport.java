@@ -85,25 +85,27 @@ public final class GeoCPMAusImport {
 
     private static final String VIEW_NAME_BASE = "view_geocpm_aus_config_";
 
-    private static final String CRS = "               PROJCS[&quot;DHDN / 3-degree Gauss-Kruger zone 2&quot;, "
-                + "  GEOGCS[&quot;DHDN&quot;, "
-                + "    DATUM[&quot;Deutsches Hauptdreiecksnetz&quot;, "
-                + "      SPHEROID[&quot;Bessel 1841&quot;, 6377397.155, 299.1528128, AUTHORITY[&quot;EPSG&quot;,&quot;7004&quot;]], "
+    private static final String CRS = "               PROJCS[\"DHDN / 3-degree Gauss-Kruger zone 2\", "
+                + "  GEOGCS[\"DHDN\", "
+                + "    DATUM[\"Deutsches Hauptdreiecksnetz\", "
+                + "      SPHEROID[\"Bessel 1841\", 6377397.155, 299.1528128, AUTHORITY[\"EPSG\",\"7004\"]], "
                 + "      TOWGS84[612.4, 77.0, 440.2, -0.054, 0.057, -2.797, 2.55], "
-                + "      AUTHORITY[&quot;EPSG&quot;,&quot;6314&quot;]], "
-                + "    PRIMEM[&quot;Greenwich&quot;, 0.0, AUTHORITY[&quot;EPSG&quot;,&quot;8901&quot;]], "
-                + "    UNIT[&quot;degree&quot;, 0.017453292519943295], "
-                + "    AXIS[&quot;Geodetic longitude&quot;, EAST], "
-                + "    AXIS[&quot;Geodetic latitude&quot;, NORTH], "
-                + "    AUTHORITY[&quot;EPSG&quot;,&quot;4314&quot;]], "
-                + "  PROJECTION[&quot;Transverse_Mercator&quot;, AUTHORITY[&quot;EPSG&quot;,&quot;9807&quot;]], "
-                + "  PARAMETER[&quot;central_meridian&quot;, 6.0], "
-                + "  PARAMETER[&quot;latitude_of_origin&quot;, 0.0], "
-                + "  PARAMETER[&quot;scale_factor&quot;, 1.0], "
-                + "  PARAMETER[&quot;false_easting&quot;, 2500000.0], "
-                + "  PARAMETER[&quot;false_northing&quot;, 0.0], "
-                + "  UNIT[&quot;m&quot;, 1.0], "
-                + "  AXIS[&quot;Easting&quot;, EAST], ";
+                + "      AUTHORITY[\"EPSG\",\"6314\"]], "
+                + "    PRIMEM[\"Greenwich\", 0.0, AUTHORITY[\"EPSG\",\"8901\"]], "
+                + "    UNIT[\"degree\", 0.017453292519943295], "
+                + "    AXIS[\"Geodetic longitude\", EAST], "
+                + "    AXIS[\"Geodetic latitude\", NORTH], "
+                + "    AUTHORITY[\"EPSG\",\"4314\"]], "
+                + "  PROJECTION[\"Transverse_Mercator\", AUTHORITY[\"EPSG\",\"9807\"]], "
+                + "  PARAMETER[\"central_meridian\", 6.0], "
+                + "  PARAMETER[\"latitude_of_origin\", 0.0], "
+                + "  PARAMETER[\"scale_factor\", 1.0], "
+                + "  PARAMETER[\"false_easting\", 2500000.0], "
+                + "  PARAMETER[\"false_northing\", 0.0], "
+                + "  UNIT[\"m\", 1.0], "
+                + "  AXIS[\"Easting\", EAST], " 
+                + " AXIS[\"Northing\", NORTH], " 
+                + " AUTHORITY[\"EPSG\",\"31466\"]]";
 
     private static final String BB_QUERY = " select "
                 + " ST_XMIN(st_extent(geom)) as native_xmin,"
@@ -737,7 +739,8 @@ public final class GeoCPMAusImport {
         layer.setEnabled(true);
         layer.setDefaultStyle(GEOSERVER_SLD);
 
-        if (!publisher.publishDBLayer(this.workspace, GEOSERVER_DATASTORE, featureType, layer)) {
+        if (!publisher.publishDBLayer(this.workspace, GEOSERVER_DATASTORE
+                , featureType, layer)) {
             throw new RuntimeException("GeoServer import was not successful");
         }
 
