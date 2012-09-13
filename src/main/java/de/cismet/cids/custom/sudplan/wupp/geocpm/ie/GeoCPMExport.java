@@ -384,19 +384,23 @@ public class GeoCPMExport {
             final StringBuilder tmpContent = new StringBuilder(this.prepContent.capacity() / 3);
             final StringBuilder tmpContent3D = new StringBuilder(tmpContent.capacity());
 
+            String formattedZ;
+            
             while (result.next()) {
                 index = result.getString(1);
                 x = result.getBigDecimal(2);
                 y = result.getBigDecimal(3);
                 z = result.getBigDecimal(4);
 
+                formattedZ = this.handleValue(DCF3, z);
+                
                 tmpContent.append(this.handleValue(index))
                         .append(FIELD_SEP)
                         .append(this.handleValue(DCF3, x))
                         .append(FIELD_SEP)
                         .append(this.handleValue(DCF3, y))
                         .append(FIELD_SEP)
-                        .append(this.handleValue(DCF3, z))
+                        .append(formattedZ)
                         .append(EOL);
 
                 // write 3d specific coordinates
@@ -410,7 +414,7 @@ public class GeoCPMExport {
                         .append(FIELD_SEP)
                         .append(this.handleValue(y))
                         .append(FIELD_SEP)
-                        .append(this.handleValue(z))
+                        .append(formattedZ)
                         .append(EOL);
 
                 count++;
