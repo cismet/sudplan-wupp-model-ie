@@ -116,6 +116,28 @@ public final class GeoCPMAusImport {
                 + " ST_YMAX(TRANSFORM(ST_SetSRID(st_extent(geom), 31466), 4326)) as lat_lon_ymax"
                 + " from " + VIEW_NAME_BASE;
 
+    private static final Pattern REGEX_INFO_NUM_ELEMENTS = Pattern.compile("Anzahl Elemente.*");
+    private static final Pattern REGEX_INFO_NUM_EDGES = Pattern.compile("Anzahl Kanten.*");
+    private static final Pattern REGEX_INFO_NUM_CALC_STEPS = Pattern.compile("Anzahl Berechnungsschritte.*");
+    private static final Pattern REGEX_INFO_VOL_DRAIN = Pattern.compile(".*Drain/Source in l.*");
+    private static final Pattern REGEX_INFO_VOL_STREET = Pattern.compile(".*Strasse in l.*");
+    private static final Pattern REGEX_INFO_VOL_ELEMENTS = Pattern.compile(".*Elementen in l.*");
+    private static final Pattern REGEX_INFO_VOL_LOSS = Pattern.compile(".*Verluste in l.*");
+    private static final Pattern REGEX_INFO_VOL_EXC_GEOCPM = Pattern.compile(".*GeoCPM in l.*");
+    private static final Pattern REGEX_INFO_VOL_EXC_DYNA = Pattern.compile(".*DYNA in l.*");
+    private static final Pattern REGEX_INFO_SURFACE_GEOCPM = Pattern.compile(".*GeoCPM in mm.*");
+    private static final Pattern REGEX_INFO_TIME_TOTAL = Pattern.compile("Zeit.*Gesamtdauer.*");
+    private static final Pattern REGEX_INFO_TIME_CALC_STEP = Pattern.compile("Zeit.*Zeitschrittberechnung.*");
+    private static final Pattern REGEX_INFO_TIME_CONDITIONS = Pattern.compile("Zeit.*Randbedingungen\\s+:.*");
+    private static final Pattern REGEX_INFO_TIME_CONDITIONS_DRAIN = Pattern.compile(
+            "\\s+Zeit.*Randbedingungen.*Source and Drain:.*");
+    private static final Pattern REGEX_INFO_TIME_CONDITIONS_MANHOLE = Pattern.compile(
+            "\\s+Zeit.*Randbedingungen.*Schaechte\\s+:.*");
+    private static final Pattern REGEX_INFO_TIME_CONDITIONS_TRIANGLES = Pattern.compile(
+            "\\s+Zeit.*Randbedingungen.*Dreieckselemente:.*");
+    private static final Pattern REGEX_INFO_TIME_DGL = Pattern.compile("Zeit.*DGL:.*");
+    private static final Pattern REGEX_INFO_TIME_OVERHEAD = Pattern.compile("Zeit.*Overhead\\s+:.*");
+
     //~ Instance fields --------------------------------------------------------
 
     private int configId;
@@ -276,7 +298,6 @@ public final class GeoCPMAusImport {
      *
      * @throws  IOException            DOCUMENT ME!
      * @throws  IllegalStateException  DOCUMENT ME!
-     * @throws  RuntimeException       DOCUMENT ME!
      */
     private void loadExportMetaData() throws IOException {
         LOG.info("Start loading export meta data...");
@@ -293,15 +314,10 @@ public final class GeoCPMAusImport {
 
         final String geocpm3DFolderName = prop.getProperty(GeoCPMExport.PROP_GEOCPM_3D_FOLDER);
         this.geocpm3DFolder = new File(this.targetFolder, geocpm3DFolderName);
-        if (this.geocpm3DFolder.exists()) {
+        if (!this.geocpm3DFolder.exists()) {
             throw new IllegalStateException("Folder "
                         + geocpm3DFolderName
-                        + " does already exist");
-        }
-
-        if (!this.geocpm3DFolder.mkdir()) {
-            throw new RuntimeException("Cannot create GeoCPM 3D folder: "
-                        + geocpmFolder);
+                        + " does not exist");
         }
 
         this.resultsFolder = this.findResultsFolder(new File(this.targetFolder, geocpmFolder));
@@ -358,6 +374,10 @@ public final class GeoCPMAusImport {
      * @return  value, if value represents an Integer, "NULL" otherwise
      */
     private String handleParsedIntegerValue(final String value) {
+        if (value == null) {
+            return NULL;
+        }
+
         final Matcher m = PATTERN_NUMBER.matcher(value);
         if (m.matches()) {
             return value;
@@ -380,6 +400,10 @@ public final class GeoCPMAusImport {
      *          NUMERIC(precision, scale) at all.
      */
     private String handleParsedDecimalValue(final String value, final int precision, final int scale) {
+        if (value == null) {
+            return NULL;
+        }
+
         try {
             final BigDecimal number = new BigDecimal(value);
             if ((number.precision() <= precision) && (number.scale() <= scale)) {
@@ -444,12 +468,66 @@ public final class GeoCPMAusImport {
         final BufferedReader reader = this.readInFile(this.infoFile);
         Matcher m;
         String line;
-        int i = 0;
+        final int i = 0;
         final String[] values = new String[18];
         while ((line = reader.readLine()) != null) {
             m = PATTERN_INFO.matcher(line);
             if (m.matches()) {
-                values[i++] = m.group(1);
+                if (REGEX_INFO_NUM_ELEMENTS.matcher(line).matches()) {
+                    // number of elements
+                    values[0] = m.group(1);
+                } else if (REGEX_INFO_NUM_EDGES.matcher(line).matches()) {
+                    // number of edges
+                    values[1] = m.group(1);
+                } else if (REGEX_INFO_NUM_CALC_STEPS.matcher(line).matches()) {
+                    // number of calc steps
+                    values[2] = m.group(1);
+                } else if (REGEX_INFO_VOL_DRAIN.matcher(line).matches()) {
+                    // volume drain source
+                    values[3] = m.group(1);
+                } else if (REGEX_INFO_VOL_STREET.matcher(line).matches()) {
+                    // volume street
+                    values[4] = m.group(1);
+                } else if (REGEX_INFO_VOL_ELEMENTS.matcher(line).matches()) {
+                    // volume all
+                    values[5] = m.group(1);
+                } else if (REGEX_INFO_VOL_LOSS.matcher(line).matches()) {
+                    // volume loss
+                    values[6] = m.group(1);
+                } else if (REGEX_INFO_VOL_EXC_GEOCPM.matcher(line).matches()) {
+                    // volume exchange dyna -> geocpm
+                    values[7] = m.group(1);
+                } else if (REGEX_INFO_VOL_EXC_DYNA.matcher(line).matches()) {
+                    // volume exchange geocpm -> dyna
+                    values[8] = m.group(1);
+                } else if (REGEX_INFO_SURFACE_GEOCPM.matcher(line).matches()) {
+                    // rain surface elements
+                    values[9] = m.group(1);
+                } else if (REGEX_INFO_TIME_TOTAL.matcher(line).matches()) {
+                    // time total
+                    values[10] = m.group(1);
+                } else if (REGEX_INFO_TIME_CALC_STEP.matcher(line).matches()) {
+                    // time calculation steps
+                    values[11] = m.group(1);
+                } else if (REGEX_INFO_TIME_CONDITIONS.matcher(line).matches()) {
+                    // time boundary conditions
+                    values[12] = m.group(1);
+                } else if (REGEX_INFO_TIME_CONDITIONS_DRAIN.matcher(line).matches()) {
+                    // time boundary conditions source drain
+                    values[13] = m.group(1);
+                } else if (REGEX_INFO_TIME_CONDITIONS_MANHOLE.matcher(line).matches()) {
+                    // time boundary conditions manhole
+                    values[14] = m.group(1);
+                } else if (REGEX_INFO_TIME_CONDITIONS_TRIANGLES.matcher(line).matches()) {
+                    // time boundary conditions triangel
+                    values[15] = m.group(1);
+                } else if (REGEX_INFO_TIME_DGL.matcher(line).matches()) {
+                    // time DGL
+                    values[16] = m.group(1);
+                } else if (REGEX_INFO_TIME_OVERHEAD.matcher(line).matches()) {
+                    // time overhead
+                    values[17] = m.group(1);
+                }
             } else {
                 LOG.warn("Line does not match pattern -> IGNORED: " + line);
             }
@@ -525,9 +603,8 @@ public final class GeoCPMAusImport {
      * @throws  Exception  DOCUMENT ME!
      */
     private void prepareGeoCPM3Data() throws Exception {
-        // copy result files to GeoCPM 3D folder
-        FileUtils.copyFileToDirectory(this.maxFile, this.geocpm3DFolder);
-        FileUtils.copyFileToDirectory(this.infoFile, this.geocpm3DFolder);
+        // copy results folder to GeoCPM 3D folder
+        FileUtils.copyDirectoryToDirectory(this.resultsFolder, this.geocpm3DFolder);
 
         // create zip file GeoCPM 3D folder
         final ZipOutputStream out = new ZipOutputStream(new FileOutputStream(
@@ -535,8 +612,7 @@ public final class GeoCPMAusImport {
                             + ".zip"));
 
         FileInputStream fin;
-
-        for (final File file : this.geocpm3DFolder.listFiles((FileFilter)FileFileFilter.FILE)) {
+        for (final File file : FileUtils.listFiles(this.geocpm3DFolder, null, true)) {
             out.putNextEntry(new ZipEntry(file.getName()));
             fin = new FileInputStream(file);
             IOUtils.copy(fin, out);
@@ -764,5 +840,15 @@ public final class GeoCPMAusImport {
                 }
             }
         }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param  args  DOCUMENT ME!
+     */
+    public static void main(final String[] args) {
+        System.out.println("     Zeit - Randbedingungen - Source and Drain: 3328088.00".matches(
+                "Zeit.*Randbedingungen\\s+:.*"));
     }
 }
