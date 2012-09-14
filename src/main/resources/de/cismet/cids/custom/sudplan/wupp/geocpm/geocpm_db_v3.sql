@@ -61,7 +61,7 @@ CREATE TABLE geocpm_configuration
   CONSTRAINT geocpm_configuration_geom_fkey FOREIGN KEY (geom)
       REFERENCES geom (id) MATCH SIMPLE
       ON UPDATE NO ACTION ON DELETE NO ACTION
-)
+);
 
 
 -- we use the geom table of cids
@@ -92,6 +92,9 @@ CREATE TABLE geocpm_triangle (
     be_height_b NUMERIC(18, 3),
     be_height_c NUMERIC(18, 3),
     marked BOOLEAN,
+    tmp_point_a_id INTEGER,
+    tmp_point_b_id INTEGER,
+    tmp_point_c_id INTEGER,
 
     FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration,
     FOREIGN KEY (geocpm_point_a_id) REFERENCES geocpm_point,
