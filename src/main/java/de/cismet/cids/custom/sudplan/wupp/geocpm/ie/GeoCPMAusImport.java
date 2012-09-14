@@ -103,8 +103,8 @@ public final class GeoCPMAusImport {
                 + "  PARAMETER[\"false_easting\", 2500000.0], "
                 + "  PARAMETER[\"false_northing\", 0.0], "
                 + "  UNIT[\"m\", 1.0], "
-                + "  AXIS[\"Easting\", EAST], " 
-                + " AXIS[\"Northing\", NORTH], " 
+                + "  AXIS[\"Easting\", EAST], "
+                + " AXIS[\"Northing\", NORTH], "
                 + " AUTHORITY[\"EPSG\",\"31466\"]]";
 
     private static final String BB_QUERY = " select "
@@ -739,8 +739,7 @@ public final class GeoCPMAusImport {
         layer.setEnabled(true);
         layer.setDefaultStyle(GEOSERVER_SLD);
 
-        if (!publisher.publishDBLayer(this.workspace, GEOSERVER_DATASTORE
-                , featureType, layer)) {
+        if (!publisher.publishDBLayer(this.workspace, GEOSERVER_DATASTORE, featureType, layer)) {
             throw new RuntimeException("GeoServer import was not successful");
         }
 

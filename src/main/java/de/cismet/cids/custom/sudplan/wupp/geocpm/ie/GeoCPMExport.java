@@ -385,7 +385,7 @@ public class GeoCPMExport {
             final StringBuilder tmpContent3D = new StringBuilder(tmpContent.capacity());
 
             String formattedZ;
-            
+
             while (result.next()) {
                 index = result.getString(1);
                 x = result.getBigDecimal(2);
@@ -393,7 +393,7 @@ public class GeoCPMExport {
                 z = result.getBigDecimal(4);
 
                 formattedZ = this.handleValue(DCF3, z);
-                
+
                 tmpContent.append(this.handleValue(index))
                         .append(FIELD_SEP)
                         .append(this.handleValue(DCF3, x))
