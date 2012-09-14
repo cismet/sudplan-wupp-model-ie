@@ -22,6 +22,10 @@ DROP TABLE IF EXISTS delta_configuration_delta_breaking_edge;
 DROP SEQUENCE IF EXISTS delta_breaking_edge_seq;
 DROP SEQUENCE IF EXISTS delta_configuration_delta_breaking_edge_seq;
 DROP SEQUENCE IF EXISTS delta_configuration_seq;
+DROP INDEX IF EXISTS geocpm_breaking_edge_index_idx;
+DROP INDEX IF EXISTS geocpm_manhole_index_idx;
+DROP TABLE    IF EXISTS rainevent;
+DROP SEQUENCE IF EXISTS rainevent_seq;
 
 
 CREATE SEQUENCE geocpm_configuration_seq MINVALUE 1 START 1;
@@ -74,7 +78,7 @@ CREATE TABLE geocpm_point (
     FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration
 );
 SELECT AddGeometryColumn('public', 'geocpm_point', 'geom', 31466, 'POINT', 3);
-CREATE INDEX geocpm_point_index_idx ON geocpm_point (index);
+CREATE INDEX geocpm_point_index_idx ON geocpm_point (geocpm_configuration_id, index);
 
 CREATE TABLE geocpm_triangle (
     id BIGSERIAL PRIMARY KEY,
@@ -103,7 +107,7 @@ CREATE TABLE geocpm_triangle (
 );
 SELECT AddGeometryColumn('public', 'geocpm_triangle', 'geom', 31466, 'POLYGON', 3);
 
-CREATE INDEX geocpm_triangle_index_idx ON geocpm_triangle  (index);
+CREATE INDEX geocpm_triangle_index_idx ON geocpm_triangle  (geocpm_configuration_id, index);
 
 -- we use an integer pkey so that there won't be an issue with cids
 -- we don't use serial because of cids, too
@@ -122,6 +126,8 @@ CREATE TABLE geocpm_breaking_edge (
 );
 -- we use the geom table of cids
 --SELECT AddGeometryColumn('public', 'geocpm_breaking_edge', 'geom', 31466, 'LINESTRING', 2);
+CREATE INDEX geocpm_breaking_edge_index_idx ON geocpm_breaking_edge  (geocpm_configuration_id, index);
+
 
 -- this is for cids
 CREATE SEQUENCE geocpm_breaking_edge_seq MINVALUE 1 START 1;
@@ -190,9 +196,10 @@ CREATE TABLE geocpm_manhole (
     loss_emersion NUMERIC(17, 2),
     length_emersion NUMERIC(17, 2),
     name VARCHAR(200),
-
     FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration
 );
+
+CREATE INDEX geocpm_manhole_index_idx ON geocpm_manhole  (geocpm_configuration_id, name);
 
 CREATE TABLE geocpm_jt_manhole_triangle (
     id BIGSERIAL PRIMARY KEY,
