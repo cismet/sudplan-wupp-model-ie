@@ -16,34 +16,11 @@
  */
 package de.cismet.cids.custom.sudplan.wupp.geocpm.ie;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
-import de.cismet.remotetesthelper.ws.rest.RemoteTestHelperClient;
-import de.cismet.remotetesthelper.ws.rest.RemoteTestHelperServiceRESTImpl;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
-import java.sql.Connection;
-import de.cismet.tools.ScriptRunner;
-import java.io.BufferedInputStream;
-import java.io.InputStream;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
-import java.util.zip.GZIPInputStream;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 /**
  * ImportExportTest tests right functionality of {@link GeoCPMImport} and {@link GeoCPMExport}.
@@ -68,27 +45,7 @@ import static org.junit.Assert.*;
 
 public class ImportExportTest 
 {    
-    private GeoCPMImport importer;
-    private GeoCPMExport exporter;
-    private File         testOutFile;
-    
-    private static Connection CON;
-    private static Statement  STMT;
-
-    private static final String TEST_INPUT_FILE  = "GeoCPM_test.ein.gz";
-    private static final String TEST_OUTPUT_FILE = "GeoCPM_test_out.ein";
-    
-    private static final String GEOCPMF_D = "GEOCPMF.D";
-    private static final String GEOCPMI_D = "GEOCPMI.D";
-    private static final String GEOCPMS_D = "GEOCPMS.D";
-    
-    private static final String DB_USER   = "";
-    private static final String DB_PWD    = "";
-    
-    
-    private static final String TEST_DB_NAME = "simple_geocpm_test_db_jimmy";
-    private static final RemoteTestHelperClient SERVICE = new RemoteTestHelperClient();
-    
+  
     
     public ImportExportTest() {
     }
@@ -105,315 +62,60 @@ public class ImportExportTest
         p.put("log4j.rootLogger", "ALL,Remote");
         org.apache.log4j.PropertyConfigurator.configure(p);
 
-
-        SERVICE.dropDatabase(TEST_DB_NAME);
-        
-        
-        if (! Boolean.valueOf(SERVICE.initCidsSystem(TEST_DB_NAME))) 
-        {
-            throw new IllegalStateException("cannot initilise test db");
-        }
-        
-        CON  = SERVICE.getConnection(TEST_DB_NAME);
-        STMT = CON.createStatement();    
-
-
-        try
-        {            
-            STMT.executeUpdate("drop view geosuche;"); // removed as geometry column modification wouldn't be possible otherwise
-            STMT.execute("SELECT DropGeometryColumn('public','geom','geo_field');");
-            STMT.execute("SELECT AddGeometryColumn( 'public','geom','geo_field', -1, 'GEOMETRY', 2 );");
-        
-              
-            
-//            // delta configuration test case
-//            STMT.execute("INSERT INTO delta_configuration (description, locked, name, delta_breaking_edges, original_object) VALUES ('MyDeltaConfig dEsc', DEFAULT, 'MyDeltaConfig', 1, 1);");
-//            STMT.execute("INSERT INTO delta_breaking_edge (name, height, description, original_object)	VALUES ('mydeltaBK1', 0.5, 'mydeltaBK1 desc', 1);");
-//            STMT.execute("INSERT INTO delta_configuration_delta_breaking_edge (delta_configuration_reference, delta_breaking_edge) VALUES (4, 11);");
-            
-        }
-        catch(final SQLException e)
-        {
-            e.printStackTrace();
-            e.getNextException().printStackTrace();
-            throw e;
-        }
-        
-        final ScriptRunner runner = new ScriptRunner(CON, true, true);
-        runner.runScript(new BufferedReader(
-                                 new InputStreamReader(                       
-                                     ImportExportTest.class.getResourceAsStream("../geocpm_db_v2.sql"))));
-          
-                  
-        STMT.execute("INSERT INTO rainevent VALUES ('120:157:226:584:98:82:71:63:56:51:47:44', 'Euler2 (60min, 100a) KOSTRA', 102, 24407, false, NULL, 5);");
-        STMT.execute("INSERT INTO rainevent VALUES ('88.89:88.89:88.89:88.89:88.89:88.89:333.33:333.33:333.33:333.33:80.00:80.00:80.00:80.00:80.00:80.00:80.00:80.00:80.00:80.00', 'Original Lüntenbeck Regenereignis', 7, 24408, false, NULL, 3);");
-
     }
 
-    @AfterClass 
-    public static void tearDownClass() throws Exception 
-    {
-        STMT.close();
-        CON.close();
-        
-        if (! Boolean.valueOf(SERVICE.dropDatabase(TEST_DB_NAME))) 
-        {
-            throw new IllegalStateException("could not drop test db");
-        }
-    }
-    
-    @Before 
-    public void setUp() throws Exception
-    {
-        this.testOutFile = new File(TEST_OUTPUT_FILE);
-    }
-    
-    @After
-    public void tearDown() throws Exception
-    {
-//        this.testOutFile.delete();
-
-        final File geocpmFDOut = new File(GEOCPMF_D);
-        final File geocpmIDOut = new File(GEOCPMI_D);
-        final File geocpmSDOut = new File(GEOCPMS_D);
-        
-        geocpmFDOut.delete();
-        geocpmIDOut.delete();
-        geocpmSDOut.delete();
-    }
-    
-    private int getNewestConfigId() throws Exception
-    {
-        ResultSet result = null;
-        try
-        {
-            result = STMT.executeQuery("select max(id) from geocpm_configuration");
-            assertTrue(result.next());
-            final int newConfigId = result.getInt(1);
-            result.close();
-            return newConfigId;  
-        }
-        finally
-        {
-           result.close();
-        }
-
-    }
-    
-    
     @Test
-    public void testImportExport() throws Exception
+    public void test() throws Exception
     {
-        final String dbURL =   CON.getMetaData().getURL(); //  "jdbc:postgresql://192.168.100.12:5432/sudplan_geocpm_test"; 
-       
-        
-        
-        
-        GZIPInputStream gin = new GZIPInputStream(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE));
-        BufferedInputStream geocpmEin = new BufferedInputStream(gin);
-        
-        
-        final InputStream geocpmFD = ImportExportTest.class.getResourceAsStream(GEOCPMF_D);
-        final InputStream geocpmSD = ImportExportTest.class.getResourceAsStream(GEOCPMS_D);
-        final InputStream geocpmID = ImportExportTest.class.getResourceAsStream(GEOCPMI_D);
-        
-        
-//        this.importer = new GeoCPMImport(new FileInputStream(new File("/home/bfriedrich/Desktop/geocpm/2012-02-27/DYNA-GeoCPM_120131/GeoCPM_Nullvariante_T=100a/GeoCPM.ein")),
-//                                         new FileInputStream(new File("/home/bfriedrich/Desktop/geocpm/2012-02-27/DYNA-GeoCPM_120131/GeoCPM_DVWK_T=100a Nullvariante/DYNA.EIN")),
-//                                         geocpmID,
-//                                         geocpmFD,
-//                                         geocpmSD,
-//                                         "GeoCPM_Nullvariante_T=100a", // geocpm folder
-//                                         "GeoCPM_DVWK_T=100a Nullvariante", // dyna folder
-//                                         DB_USER, 
-//                                         DB_PWD, 
-//                                         dbURL);
-        this.importer.doImport();
-        
-        
-        
-        this.exporter = new GeoCPMExport(this.getNewestConfigId(), new File("/tmp/geocpm_export"), DB_USER, DB_PWD, dbURL);
-        this.exporter.doExport();
-
-        
-        
-//
+//        GeoCPMExport exporter = new GeoCPMExport(2, 
+//                                    46, 
+//                                    new File("/tmp/geocpm_export"), 
+//                                    "postgres", 
+//                                    "cismetz12", 
+//                                    "jdbc:postgresql://192.168.100.12:5432/sudplan_wupp");
+//        exporter.doExport();
+//        
+//        
 //        
 //        final ArrayList<Double> precipitations = new ArrayList<Double>(12);
-//        precipitations.add(3.00);
-//        precipitations.add(3.00);
-//        precipitations.add(3.00);
-//        precipitations.add(13.00);
-//        precipitations.add(13.00);
-//        precipitations.add(13.00);
-//        precipitations.add(13.00);
-//        precipitations.add(13.00);
-//        precipitations.add(40.00);
-//        precipitations.add(20.00);
-//        precipitations.add(20.00);
-//        precipitations.add(15.00);
-//        precipitations.add(0.00);
-//        precipitations.add(0.00);
-//        precipitations.add(3.00);
-//        precipitations.add(3.00);
-//        precipitations.add(3.00);
+//
+//        precipitations.add(88.89);
+//        precipitations.add(88.89);
+//        precipitations.add(88.89);
+//        precipitations.add(88.89);
+//        precipitations.add(88.89);
+//        precipitations.add(88.89);
+//        precipitations.add(333.33);
+//        precipitations.add(333.33);
+//        precipitations.add(333.33);
+//        precipitations.add(333.33);
+//        precipitations.add(80.00);
+//        precipitations.add(80.00);
+//        precipitations.add(80.00);
+//        precipitations.add(80.00);
+//        precipitations.add(80.00);
+//        precipitations.add(80.00);
+//        precipitations.add(80.00);
+//        precipitations.add(80.00);
+//        precipitations.add(80.00);
+//        precipitations.add(80.00);
 //
 //        
-//        final Rainevent rainEvent = new Rainevent(5, precipitations);
-//        this.exporter.generateDYNA(rainEvent);
-    
- 
-       
-        
-//           final GeoCPMAusImport ausImport = new GeoCPMAusImport(new File("/tmp/geocpm_export"), 
-//                    DB_USER, DB_PWD, dbURL, "admin", "geoserver", "http://localhost:8080/geoserver", "sudplan");
-//           ausImport.go();
-//        
+//        exporter.generateDYNA(3, precipitations);
         
         
+        //-----------------------------------------------------
         
-        
-        
-        
-        
-        
-        
-        
-        
-//        
-//
-//        //--- compare binary files
-//        final File geocpmFDOut = new File(GEOCPMF_D);
-//        final File geocpmIDOut = new File(GEOCPMI_D);
-//        final File geocpmSDOut = new File(GEOCPMS_D);
-//        geocpmFDOut.deleteOnExit();
-//        geocpmIDOut.deleteOnExit();
-//        geocpmSDOut.deleteOnExit();
-        
-        
-//        final File geocpmFDIn  = new File(ImportExportTest.class.getResource(GEOCPMF_D).toURI());
-//        assertTrue(FileUtils.contentEquals(geocpmFDIn, geocpmFDOut));
-//        
-//        final File geocpmIDIn  = new File(ImportExportTest.class.getResource(GEOCPMI_D).toURI());
-//        assertTrue(FileUtils.contentEquals(geocpmIDIn, geocpmIDOut));
-//        
-//        final File geocpmSDIn  = new File(ImportExportTest.class.getResource(GEOCPMS_D).toURI());
-//        assertTrue(FileUtils.contentEquals(geocpmSDIn, geocpmSDOut));        
- 
-        
-        
-//        //--- compare text file content
-//        gin       = new GZIPInputStream(ImportExportTest.class.getResourceAsStream(TEST_INPUT_FILE));
-//        geocpmEin = new BufferedInputStream(gin);
-//        final List<String> inData  = IOUtils.readLines(geocpmEin);
-//        final List<String> outData = IOUtils.readLines(new FileInputStream(this.testOutFile));
-//    
-//        assertEquals("Number of import and export data is different", inData.size(), outData.size());
-//        
-//        final int size = inData.size();
-//        for(int i = 0; i < size; i++)
-//        {
-//            // Sometimes, there is a field delimiter at the end of a record in in the INPUT file.
-//            // For now, we ignore it in our tests
-//            assertEquals(inData.get(i).trim(), outData.get(i).trim());
-//        }
-    }
-    
-    
-    
-    private void testDyna(final int interval, final List<Double> rainValues, final String referenceFile) throws Exception
-    {
-        this.exporter = new GeoCPMExport(1, this.testOutFile, DB_USER, DB_PWD, CON.getMetaData().getURL());
-        this.exporter.generateDYNA(interval, rainValues);
-        
-        final String parent   = this.testOutFile.getParent();
-        final File   exported = new File(parent, GeoCPMExport.DYNA_FILE);
-        
-        exported.deleteOnExit();
-        
-        
-        final List<String> exportedData  = IOUtils.readLines(ImportExportTest.class.getResourceAsStream(referenceFile));
-        final List<String> referenceData = IOUtils.readLines(new FileInputStream(exported));
-    
-        assertEquals("Number of DYNA records is different", exportedData.size(), referenceData.size());
-        
-        final int size = referenceData.size();
-        for(int i = 0; i < size; i++)
-        {
-            // Sometimes, there is a field delimiter at the end of a record in in the INPUT file.
-            // For now, we ignore it in our tests
-            assertEquals(exportedData.get(i).trim(), referenceData.get(i).trim());
-        }
-        
-        exported.delete();
-    }
-    
-    @Test  @Ignore
-    public void testDynaExport() throws Exception
-    {
-         
-        final ArrayList<Double> precipitations = new ArrayList<Double>(12);
-        precipitations.add(3.00);
-        precipitations.add(3.00);
-        precipitations.add(3.00);
-        precipitations.add(13.00);
-        precipitations.add(13.00);
-        precipitations.add(13.00);
-        precipitations.add(13.00);
-        precipitations.add(13.00);
-        precipitations.add(40.00);
-        precipitations.add(20.00);
-        precipitations.add(20.00);
-        precipitations.add(15.00);
-        precipitations.add(0.00);
-        precipitations.add(0.00);
-        precipitations.add(3.00);
-        precipitations.add(3.00);
-        precipitations.add(3.00);
-
-        
-//        final Rainevent rainEvent = new Rainevent(300, precipitations);
-//        
-        this.testDyna(300, precipitations, "DYNA.testDynaExport");
-    }
-    
-    @Test   @Ignore
-    public void testDynaTooLargeFieldValues() throws Exception
-    {
-         
-        final ArrayList<Double> precipitations = new ArrayList<Double>(12);
-        precipitations.add(1234567.89);
-        precipitations.add(12345671.89);
-        
-//        final Rainevent rainEvent = new Rainevent(300, precipitations);
-        this.testDyna(300, precipitations, "DYNA.testDynaTooLargeFieldValues");
-    }
-    
-    @Test(expected=Exception.class) @Ignore
-    public void testDynaTooManyRecords() throws Exception
-    {
-         
-        final ArrayList<Double> precipitations = new ArrayList<Double>(1000);
-        for(int i = 0; i < 999; i++)
-        {
-            precipitations.add(3.00);
-            precipitations.add(3.00);
-            precipitations.add(3.00);
-            precipitations.add(13.00);
-            precipitations.add(13.00);
-            precipitations.add(13.00);
-            precipitations.add(13.00);
-            precipitations.add(13.00);
-            precipitations.add(40.00);
-            precipitations.add(20.00);
-            precipitations.add(20.00);
-            precipitations.add(15.00); 
-        }
-
-        // that's the one which causes too many records
-        precipitations.add(1.00); 
-        
-//        final Rainevent rainEvent = new Rainevent(300, precipitations);
-        this.testDyna(300, precipitations, "DYNA.testDynaExport");
+        final GeoCPMAusImport ausImport = new GeoCPMAusImport(
+                        new File("/home/bfriedrich/Desktop/geocpm_export"), 
+                        "postgres", 
+                         "cismetz12", 
+                         "jdbc:postgresql://192.168.100.12:5432/sudplan_wupp",
+                         "admin", 
+                         "cismetz12", 
+                         "http://192.168.100.12:9987/geoserver", 
+                         "sudplan");
+   
+        ausImport.go();
     }
 }

@@ -223,7 +223,8 @@ CREATE VIEW geocpm_breaking_edge_layer AS
 CREATE TABLE geocpm_aus_info
 (
 
-  geocpm_configuration_id     BIGINT PRIMARY KEY,
+  geocpm_configuration_id     BIGINT,
+  delta_configuration_id BIGINT,
   number_of_elements   BIGINT,                                     
   number_of_edges      BIGINT,                                          
   number_of_calc_steps BIGINT,                                           
@@ -242,16 +243,19 @@ CREATE TABLE geocpm_aus_info
   time_boundary_conditions_triangle      NUMERIC(10, 2),
   time_dgl                               NUMERIC(10, 2),
   time_overhead                          NUMERIC(10, 2)
+
+  PRIMARY KEY (geocpm_configuration_id, delta_configuration_id)
 );
 
 
 CREATE TABLE geocpm_aus_max
 (
-  geocpm_configuration_id BIGINT,       
+  geocpm_configuration_id BIGINT,     
+  delta_configuration_id  BIGINT,  
   geocpm_triangle_id      BIGINT,          
   water_level             NUMERIC(20, 10),
 
-  PRIMARY KEY (geocpm_configuration_id, geocpm_triangle_id)
+  PRIMARY KEY (geocpm_configuration_id, delta_configuration_id, geocpm_triangle_id)
 );
 
 
