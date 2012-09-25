@@ -434,7 +434,7 @@ public class GeoCPMExport {
                 x = result.getBigDecimal(2);
                 y = result.getBigDecimal(3);
                 z = result.getBigDecimal(4);
-
+                
                 // Finde alle zu ändernden Punkte und verändere die Höhe, je nach Typ
 
                 final Map deltaSurfaceData = this.deltaSurfaceMapping.get(index);
@@ -448,7 +448,7 @@ public class GeoCPMExport {
                         z = z.add(newHeight);
                     }
                 }
-
+                
                 formattedZ = this.handleValue(DCF3, z);
 
                 tmpContent.append(this.handleValue(index))

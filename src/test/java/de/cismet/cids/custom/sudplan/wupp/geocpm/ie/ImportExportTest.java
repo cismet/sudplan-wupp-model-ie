@@ -17,7 +17,6 @@
 package de.cismet.cids.custom.sudplan.wupp.geocpm.ie;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Properties;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -45,8 +44,7 @@ import org.junit.Test;
 
 public class ImportExportTest 
 {    
-  
-    
+   
     public ImportExportTest() {
     }
 
@@ -61,7 +59,6 @@ public class ImportExportTest
         p.put("log4j.appender.Remote.locationInfo", "true");
         p.put("log4j.rootLogger", "ALL,Remote");
         org.apache.log4j.PropertyConfigurator.configure(p);
-
     }
 
     @Test
