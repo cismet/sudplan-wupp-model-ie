@@ -7,67 +7,68 @@ DROP TABLE IF EXISTS geocpm_breaking_edge;
 DROP TABLE IF EXISTS geocpm_source_drain;
 DROP TABLE IF EXISTS geocpm_curve_value;
 DROP TABLE IF EXISTS geocpm_curve;
-DROP TABLE IF EXISTS geocpm_triangle;
-DROP TABLE IF EXISTS geocpm_point;
-DROP TABLE IF EXISTS geocpm_configuration;
 DROP TABLE IF EXISTS geocpm_aus_info;
 DROP TABLE IF EXISTS geocpm_aus_max;
-
-DROP SEQUENCE IF EXISTS geocpm_configuration_seq;
 DROP SEQUENCE IF EXISTS geocpm_breaking_edge_seq;
 DROP INDEX    IF EXISTS geocpm_triangle_index_idx;
-
-
+DROP TABLE IF EXISTS geocpm_triangle;
+DROP INDEX    IF EXISTS geocpm_point_index_idx;
+DROP TABLE IF EXISTS geocpm_point;
+DROP TABLE IF EXISTS geocpm_configuration;
+DROP SEQUENCE IF EXISTS geocpm_configuration_seq;
 DROP TABLE IF EXISTS delta_configuration;
 DROP TABLE IF EXISTS delta_breaking_edge;
 DROP TABLE IF EXISTS delta_configuration_delta_breaking_edge;
-
 DROP SEQUENCE IF EXISTS delta_breaking_edge_seq;
 DROP SEQUENCE IF EXISTS delta_configuration_delta_breaking_edge_seq;
 DROP SEQUENCE IF EXISTS delta_configuration_seq;
-
-DROP TABLE IF EXISTS    rainevent;
+DROP INDEX IF EXISTS geocpm_breaking_edge_index_idx;
+DROP INDEX IF EXISTS geocpm_manhole_index_idx;
+DROP TABLE    IF EXISTS rainevent;
 DROP SEQUENCE IF EXISTS rainevent_seq;
 
 
-
+CREATE SEQUENCE geocpm_configuration_seq MINVALUE 1 START 1;
 
 -- we use an integer pkey so that there won't be an issue with cids
 -- we don't use serial because of cids, too
-CREATE TABLE geocpm_configuration (
-    id INTEGER PRIMARY KEY,
-    calc_begin TIMESTAMP,
-    calc_end TIMESTAMP,
-    write_node BOOLEAN,
-    write_edge BOOLEAN,
-    last_values BOOLEAN,
-    save_marked BOOLEAN,
-    merge_triangles BOOLEAN,
-    min_calc_triangle_size NUMERIC(20,8),
-    time_step_restriction BOOLEAN,
-    save_velocity_curves BOOLEAN,
-    save_flow_curves BOOLEAN,
-    result_save_limit NUMERIC(20,8),
-    number_of_threads INTEGER,
-    q_in INTEGER,
-    q_out INTEGER,
-    geom INTEGER,
-    dyna_form TEXT,
-    geocpmi_d TEXT,
-    geocpmf_d TEXT,
-    geocpms_d TEXT,
-    geocpmn_d TEXT,
-    geocpm_ein_folder VARCHAR(50),
-    dyna_ein_folder VARCHAR(50),
-
-
-    FOREIGN KEY (geom) REFERENCES geom
+CREATE TABLE geocpm_configuration
+(
+  id integer NOT NULL DEFAULT nextval('geocpm_configuration_seq'::regclass),
+  calc_begin timestamp without time zone,
+  calc_end timestamp without time zone,
+  write_node boolean,
+  write_edge boolean,
+  last_values boolean,
+  save_marked boolean,
+  merge_triangles boolean,
+  min_calc_triangle_size numeric(20,8),
+  time_step_restriction boolean,
+  save_velocity_curves boolean,
+  save_flow_curves boolean,
+  result_save_limit numeric(20,8),
+  number_of_threads integer,
+  q_in integer,
+  q_out integer,
+  geom integer,
+  dyna_form text,
+  geocpmi_d text,
+  geocpmf_d text,
+  geocpms_d text,
+  geocpm_ein_folder character varying(50),
+  dyna_ein_folder character varying(50),
+  geocpmn_d text,
+  name character varying(200),
+  description text,
+  investigation_area integer,
+  CONSTRAINT geocpm_configuration_pkey PRIMARY KEY (id ),
+  CONSTRAINT geocpm_configuration_geom_fkey FOREIGN KEY (geom)
+      REFERENCES geom (id) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION
 );
--- we use the geom table of cids
 
--- this is for cids
-CREATE SEQUENCE geocpm_configuration_seq MINVALUE 1 START 1;
-ALTER TABLE geocpm_configuration ALTER COLUMN id SET DEFAULT nextval('geocpm_configuration_seq');
+
+-- we use the geom table of cids
 
 CREATE TABLE geocpm_point (
     id BIGSERIAL PRIMARY KEY,
@@ -77,6 +78,7 @@ CREATE TABLE geocpm_point (
     FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration
 );
 SELECT AddGeometryColumn('public', 'geocpm_point', 'geom', 31466, 'POINT', 3);
+CREATE INDEX geocpm_point_index_idx ON geocpm_point (geocpm_configuration_id, index);
 
 CREATE TABLE geocpm_triangle (
     id BIGSERIAL PRIMARY KEY,
@@ -94,6 +96,9 @@ CREATE TABLE geocpm_triangle (
     be_height_b NUMERIC(18, 3),
     be_height_c NUMERIC(18, 3),
     marked BOOLEAN,
+    tmp_point_a_id INTEGER,
+    tmp_point_b_id INTEGER,
+    tmp_point_c_id INTEGER,
 
     FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration,
     FOREIGN KEY (geocpm_point_a_id) REFERENCES geocpm_point,
@@ -102,7 +107,7 @@ CREATE TABLE geocpm_triangle (
 );
 SELECT AddGeometryColumn('public', 'geocpm_triangle', 'geom', 31466, 'POLYGON', 3);
 
-CREATE INDEX geocpm_triangle_index_idx ON geocpm_triangle  (index);
+CREATE INDEX geocpm_triangle_index_idx ON geocpm_triangle  (geocpm_configuration_id, index);
 
 -- we use an integer pkey so that there won't be an issue with cids
 -- we don't use serial because of cids, too
@@ -121,6 +126,8 @@ CREATE TABLE geocpm_breaking_edge (
 );
 -- we use the geom table of cids
 --SELECT AddGeometryColumn('public', 'geocpm_breaking_edge', 'geom', 31466, 'LINESTRING', 2);
+CREATE INDEX geocpm_breaking_edge_index_idx ON geocpm_breaking_edge  (geocpm_configuration_id, index);
+
 
 -- this is for cids
 CREATE SEQUENCE geocpm_breaking_edge_seq MINVALUE 1 START 1;
@@ -189,9 +196,10 @@ CREATE TABLE geocpm_manhole (
     loss_emersion NUMERIC(17, 2),
     length_emersion NUMERIC(17, 2),
     name VARCHAR(200),
-
     FOREIGN KEY (geocpm_configuration_id) REFERENCES geocpm_configuration
 );
+
+CREATE INDEX geocpm_manhole_index_idx ON geocpm_manhole  (geocpm_configuration_id, name);
 
 CREATE TABLE geocpm_jt_manhole_triangle (
     id BIGSERIAL PRIMARY KEY,
@@ -304,21 +312,19 @@ CREATE TABLE delta_configuration_delta_breaking_edge
   CONSTRAINT delta_configuration_delta_breaking_edge_pkey PRIMARY KEY (id )
 );
 
-
-
 --------------------------------
 -- rainevent
 --------------------------------
 
 CREATE SEQUENCE rainevent_seq
-   START WITH 1
-   INCREMENT BY 1
-   NO MINVALUE
-   NO MAXVALUE
-   CACHE 1;
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
 
 
- ALTER TABLE public.rainevent_seq OWNER TO postgres;
+ALTER TABLE public.rainevent_seq OWNER TO postgres;
 
 --
 -- TOC entry 283 (class 1259 OID 26684)
@@ -326,7 +332,7 @@ CREATE SEQUENCE rainevent_seq
 -- Name: rainevent; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
 --
 
- CREATE TABLE rainevent (
+CREATE TABLE rainevent (
     data text,
     name character varying(200) NOT NULL,
     id integer DEFAULT nextval('rainevent_seq'::regclass) NOT NULL,

@@ -88,8 +88,14 @@ public class GeoCPMImport {
 
     public static final String FIELD_SEP = "     "; // NOI18N
 
-    public static final String NULL_TOKEN_FILE = "-1\\.#R";
-    public static final String NULL_TOKEN_DB = "NULL";
+    public static final String NULL_TOKEN_FILE = "-1\\.#R"; // NOI18N
+    public static final String NULL_TOKEN_DB = "NULL";      // NOI18N
+
+    private static final String RAIN_ANFA_RECORD_PREFIX = "ANFA:"; // NOI18N
+    private static final String RAIN_ENDE_RECORD_PREFIX = "ENDE:"; // NOI18N
+
+    private static final String RAIN_ANFA_RECORD = RAIN_ANFA_RECORD_PREFIX + "1";  // NOI18N
+    private static final String RAIN_ENDE_RECORD = RAIN_ENDE_RECORD_PREFIX + "99"; // NOI18N
 
     //~ Instance fields --------------------------------------------------------
 
@@ -326,21 +332,15 @@ public class GeoCPMImport {
     private void prepare(final Connection con) throws SQLException {
         LOG.info("PREPARING"); // NOI18N
 
-        final String queryA = "ALTER TABLE geocpm_triangle ADD COLUMN tmp_point_a_id INTEGER;"; // NOI18N
-        final String queryB = "ALTER TABLE geocpm_triangle ADD COLUMN tmp_point_b_id INTEGER;"; // NOI18N
-        final String queryC = "ALTER TABLE geocpm_triangle ADD COLUMN tmp_point_c_id INTEGER;"; // NOI18N
-        final String queryD = "CREATE TABLE tmp_bk_triangle_table ("                            // NOI18N
-                    + "configuration_id BIGINT, "                                               // NOI18N
-                    + "triangle_index BIGINT, "                                                 // NOI18N
-                    + "breaking_edge_index BIGINT, "                                            // NOI18N
-                    + "orientation char(1));";                                                  // NOI18N
+        final String query = "CREATE TABLE tmp_bk_triangle_table (" // NOI18N
+                    + "configuration_id BIGINT, "                   // NOI18N
+                    + "triangle_index BIGINT, "                     // NOI18N
+                    + "breaking_edge_index BIGINT, "                // NOI18N
+                    + "orientation char(1));";                      // NOI18N
 
         final Statement stmt = con.createStatement();
         try {
-            stmt.executeUpdate(queryA);
-            stmt.executeUpdate(queryB);
-            stmt.executeUpdate(queryC);
-            stmt.executeUpdate(queryD);
+            stmt.executeUpdate(query);
         } catch (final SQLException e) {
             LOG.error("cannot prepare db", e); // NOI18N
             throw e;
@@ -426,17 +426,11 @@ public class GeoCPMImport {
     private void finish(final Connection con) throws SQLException {
         LOG.info("FINISHING");
 
-        final String queryA = "ALTER TABLE geocpm_triangle DROP COLUMN tmp_point_a_id;"; // NOI18N
-        final String queryB = "ALTER TABLE geocpm_triangle DROP COLUMN tmp_point_b_id;"; // NOI18N
-        final String queryC = "ALTER TABLE geocpm_triangle DROP COLUMN tmp_point_c_id;"; // NOI18N
-        final String queryD = "DROP TABLE tmp_bk_triangle_table;";                       // NOI18N
+        final String queryA = "DROP TABLE tmp_bk_triangle_table;"; // NOI18N
 
         final Statement stmt = con.createStatement();
         try {
             stmt.executeUpdate(queryA);
-            stmt.executeUpdate(queryB);
-            stmt.executeUpdate(queryC);
-            stmt.executeUpdate(queryD);
 
             con.commit();
         } catch (final SQLException e) {
@@ -913,6 +907,8 @@ public class GeoCPMImport {
             final ByteArrayOutputStream bout = new ByteArrayOutputStream(500 * 1024); // preallocate 500kb
             final BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(bout, GeoCPMExport.DYNA_ENC));
 
+            boolean isRainData = false;
+
             String line;
             for (int i = 0; i < numLines; i++) {
                 line = originalDynaLines.get(i);
@@ -928,6 +924,19 @@ public class GeoCPMImport {
 
                     writer.write(line);
                     writer.newLine();
+
+                    isRainData = true;
+                } else if (isRainData && line.startsWith(RAIN_ANFA_RECORD_PREFIX)) {
+                    // replace current rain ANFA record with ANFA record having
+                    // the smallest possible number
+                    writer.write(RAIN_ANFA_RECORD);
+                    writer.newLine();
+                } else if (isRainData && line.startsWith(RAIN_ENDE_RECORD_PREFIX)) {
+                    // replace current rain ENDE record with ENDE record having
+                    // the largest possible number
+                    writer.write(RAIN_ENDE_RECORD);
+                    writer.newLine();
+                    isRainData = false;
                 } else {
                     writer.write(line);
                     if (i < (numLines - 1)) {

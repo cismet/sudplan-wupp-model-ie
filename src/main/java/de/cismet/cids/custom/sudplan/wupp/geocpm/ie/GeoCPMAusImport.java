@@ -11,8 +11,12 @@ import it.geosolutions.geoserver.rest.GeoServerRESTPublisher;
 import it.geosolutions.geoserver.rest.encoder.GSLayerEncoder;
 import it.geosolutions.geoserver.rest.encoder.GSResourceEncoder.ProjectionPolicy;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.filefilter.FileFileFilter;
 import org.apache.log4j.Logger;
 
+import java.io.*;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -39,10 +43,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import de.cismet.cids.custom.sudplan.geoserver.AttributesAwareGSFeatureTypeEncoder;
 import de.cismet.cids.custom.sudplan.geoserver.GSAttributeEncoder;
-import java.io.*;
 
 /**
  * DOCUMENT ME!
@@ -80,26 +85,27 @@ public final class GeoCPMAusImport {
 
     private static final String VIEW_NAME_BASE = "view_geocpm_aus_config_";
 
-
-    private static final String CRS = "               PROJCS[&quot;DHDN / 3-degree Gauss-Kruger zone 2&quot;, "
-                + "  GEOGCS[&quot;DHDN&quot;, "
-                + "    DATUM[&quot;Deutsches Hauptdreiecksnetz&quot;, "
-                + "      SPHEROID[&quot;Bessel 1841&quot;, 6377397.155, 299.1528128, AUTHORITY[&quot;EPSG&quot;,&quot;7004&quot;]], "
+    private static final String CRS = "               PROJCS[\"DHDN / 3-degree Gauss-Kruger zone 2\", "
+                + "  GEOGCS[\"DHDN\", "
+                + "    DATUM[\"Deutsches Hauptdreiecksnetz\", "
+                + "      SPHEROID[\"Bessel 1841\", 6377397.155, 299.1528128, AUTHORITY[\"EPSG\",\"7004\"]], "
                 + "      TOWGS84[612.4, 77.0, 440.2, -0.054, 0.057, -2.797, 2.55], "
-                + "      AUTHORITY[&quot;EPSG&quot;,&quot;6314&quot;]], "
-                + "    PRIMEM[&quot;Greenwich&quot;, 0.0, AUTHORITY[&quot;EPSG&quot;,&quot;8901&quot;]], "
-                + "    UNIT[&quot;degree&quot;, 0.017453292519943295], "
-                + "    AXIS[&quot;Geodetic longitude&quot;, EAST], "
-                + "    AXIS[&quot;Geodetic latitude&quot;, NORTH], "
-                + "    AUTHORITY[&quot;EPSG&quot;,&quot;4314&quot;]], "
-                + "  PROJECTION[&quot;Transverse_Mercator&quot;, AUTHORITY[&quot;EPSG&quot;,&quot;9807&quot;]], "
-                + "  PARAMETER[&quot;central_meridian&quot;, 6.0], "
-                + "  PARAMETER[&quot;latitude_of_origin&quot;, 0.0], "
-                + "  PARAMETER[&quot;scale_factor&quot;, 1.0], "
-                + "  PARAMETER[&quot;false_easting&quot;, 2500000.0], "
-                + "  PARAMETER[&quot;false_northing&quot;, 0.0], "
-                + "  UNIT[&quot;m&quot;, 1.0], "
-                + "  AXIS[&quot;Easting&quot;, EAST], ";
+                + "      AUTHORITY[\"EPSG\",\"6314\"]], "
+                + "    PRIMEM[\"Greenwich\", 0.0, AUTHORITY[\"EPSG\",\"8901\"]], "
+                + "    UNIT[\"degree\", 0.017453292519943295], "
+                + "    AXIS[\"Geodetic longitude\", EAST], "
+                + "    AXIS[\"Geodetic latitude\", NORTH], "
+                + "    AUTHORITY[\"EPSG\",\"4314\"]], "
+                + "  PROJECTION[\"Transverse_Mercator\", AUTHORITY[\"EPSG\",\"9807\"]], "
+                + "  PARAMETER[\"central_meridian\", 6.0], "
+                + "  PARAMETER[\"latitude_of_origin\", 0.0], "
+                + "  PARAMETER[\"scale_factor\", 1.0], "
+                + "  PARAMETER[\"false_easting\", 2500000.0], "
+                + "  PARAMETER[\"false_northing\", 0.0], "
+                + "  UNIT[\"m\", 1.0], "
+                + "  AXIS[\"Easting\", EAST], "
+                + " AXIS[\"Northing\", NORTH], "
+                + " AUTHORITY[\"EPSG\",\"31466\"]]";
 
     private static final String BB_QUERY = " select "
                 + " ST_XMIN(st_extent(geom)) as native_xmin,"
@@ -112,11 +118,35 @@ public final class GeoCPMAusImport {
                 + " ST_YMAX(TRANSFORM(ST_SetSRID(st_extent(geom), 31466), 4326)) as lat_lon_ymax"
                 + " from " + VIEW_NAME_BASE;
 
+    private static final Pattern REGEX_INFO_NUM_ELEMENTS = Pattern.compile("Anzahl Elemente.*");
+    private static final Pattern REGEX_INFO_NUM_EDGES = Pattern.compile("Anzahl Kanten.*");
+    private static final Pattern REGEX_INFO_NUM_CALC_STEPS = Pattern.compile("Anzahl Berechnungsschritte.*");
+    private static final Pattern REGEX_INFO_VOL_DRAIN = Pattern.compile(".*Drain/Source in l.*");
+    private static final Pattern REGEX_INFO_VOL_STREET = Pattern.compile(".*Strasse in l.*");
+    private static final Pattern REGEX_INFO_VOL_ELEMENTS = Pattern.compile(".*Elementen in l.*");
+    private static final Pattern REGEX_INFO_VOL_LOSS = Pattern.compile(".*Verluste in l.*");
+    private static final Pattern REGEX_INFO_VOL_EXC_GEOCPM = Pattern.compile(".*GeoCPM in l.*");
+    private static final Pattern REGEX_INFO_VOL_EXC_DYNA = Pattern.compile(".*DYNA in l.*");
+    private static final Pattern REGEX_INFO_SURFACE_GEOCPM = Pattern.compile(".*GeoCPM in mm.*");
+    private static final Pattern REGEX_INFO_TIME_TOTAL = Pattern.compile("Zeit.*Gesamtdauer.*");
+    private static final Pattern REGEX_INFO_TIME_CALC_STEP = Pattern.compile("Zeit.*Zeitschrittberechnung.*");
+    private static final Pattern REGEX_INFO_TIME_CONDITIONS = Pattern.compile("Zeit.*Randbedingungen\\s+:.*");
+    private static final Pattern REGEX_INFO_TIME_CONDITIONS_DRAIN = Pattern.compile(
+            "\\s+Zeit.*Randbedingungen.*Source and Drain:.*");
+    private static final Pattern REGEX_INFO_TIME_CONDITIONS_MANHOLE = Pattern.compile(
+            "\\s+Zeit.*Randbedingungen.*Schaechte\\s+:.*");
+    private static final Pattern REGEX_INFO_TIME_CONDITIONS_TRIANGLES = Pattern.compile(
+            "\\s+Zeit.*Randbedingungen.*Dreieckselemente:.*");
+    private static final Pattern REGEX_INFO_TIME_DGL = Pattern.compile("Zeit.*DGL:.*");
+    private static final Pattern REGEX_INFO_TIME_OVERHEAD = Pattern.compile("Zeit.*Overhead\\s+:.*");
+
     //~ Instance fields --------------------------------------------------------
 
     private int configId;
     private File infoFile;
     private File maxFile;
+    private File resultsFolder;
+    private File geocpm3DFolder;
 
     private final String user;
     private final String password;
@@ -192,6 +222,22 @@ public final class GeoCPMAusImport {
      *
      * @throws  IllegalStateException  DOCUMENT ME!
      */
+    public File getResultsFolder() {
+        if (this.resultsFolder == null) {
+            throw new IllegalStateException("Result folder is not available,"
+                        + " if no results import has been performed");
+        }
+
+        return this.resultsFolder;
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  IllegalStateException  DOCUMENT ME!
+     */
     public String getLayerName() {
         if (this.configId == -1) {
             throw new IllegalStateException("No layer has been imported yet");
@@ -200,61 +246,60 @@ public final class GeoCPMAusImport {
         return VIEW_NAME_BASE + this.configId;
     }
 
-    
-    private File findResultsFolder(final File baseFolder) 
-    {
-        if(! baseFolder.isDirectory())
-        {
-            throw new IllegalArgumentException("base folder " + 
-                                               baseFolder + 
-                                               " does not exist");
-        }
-        
-        // determine possible result folders
-        
-        final File[] possibleResultFolders = baseFolder.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(final File file, final String fileName) {
-                return file.isDirectory() && fileName.matches("\\d+");
-            }
-        });
-        
-        // find folder with file name representing the largest number among
-        // all possible result folders
-        
-        if(possibleResultFolders.length == 0)
-        {
-            throw new IllegalArgumentException("Base folder " + baseFolder +  
-                                               " does not contain a result folder");
-        }
-        
-        if(possibleResultFolders.length == 1)
-        {
-            return possibleResultFolders[0];
-        }
-        else
-        {
-            File f = possibleResultFolders[0];
-        
-            for(int i = 1; i < possibleResultFolders.length; i++)
-            {
-                if(possibleResultFolders[i].getName().compareTo(f.getName()) > 0)
-                {
-                    f = possibleResultFolders[i];
-                }
-            }
-        
-            return f;
-        }
-
-    }
-    
-    
     /**
      * DOCUMENT ME!
      *
-     * @throws  IOException       DOCUMENT ME!
-     * @throws  RuntimeException  DOCUMENT ME!
+     * @param   baseFolder  DOCUMENT ME!
+     *
+     * @return  DOCUMENT ME!
+     *
+     * @throws  IllegalArgumentException  DOCUMENT ME!
+     */
+    private File findResultsFolder(final File baseFolder) {
+        if (!baseFolder.isDirectory()) {
+            throw new IllegalArgumentException("base folder "
+                        + baseFolder
+                        + " does not exist");
+        }
+
+        // determine possible result folders
+
+        final File[] possibleResultFolders = baseFolder.listFiles(new FilenameFilter() {
+
+                    @Override
+                    public boolean accept(final File file, final String fileName) {
+                        return file.isDirectory() && fileName.matches("\\d+");
+                    }
+                });
+
+        // find folder with file name representing the largest number among
+        // all possible result folders
+
+        if (possibleResultFolders.length == 0) {
+            throw new IllegalArgumentException("Base folder " + baseFolder
+                        + " does not contain a result folder");
+        }
+
+        if (possibleResultFolders.length == 1) {
+            return possibleResultFolders[0];
+        } else {
+            File f = possibleResultFolders[0];
+
+            for (int i = 1; i < possibleResultFolders.length; i++) {
+                if (possibleResultFolders[i].getName().compareTo(f.getName()) > 0) {
+                    f = possibleResultFolders[i];
+                }
+            }
+
+            return f;
+        }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @throws  IOException            DOCUMENT ME!
+     * @throws  IllegalStateException  DOCUMENT ME!
      */
     private void loadExportMetaData() throws IOException {
         LOG.info("Start loading export meta data...");
@@ -268,15 +313,19 @@ public final class GeoCPMAusImport {
         this.configId = Integer.parseInt(prop.getProperty(GeoCPMExport.PROP_CONFIG_ID));
 
         final String geocpmFolder = prop.getProperty(GeoCPMExport.PROP_GEOCPM_FOLDER);
-        
-        final File resultsFolderFile = this.findResultsFolder(new File(this.targetFolder, geocpmFolder));
-        
-        if (!resultsFolderFile.exists()) {
-            throw new RuntimeException("There is no results folder named " + resultsFolderFile);
+
+        final String geocpm3DFolderName = prop.getProperty(GeoCPMExport.PROP_GEOCPM_3D_FOLDER);
+        this.geocpm3DFolder = new File(this.targetFolder, geocpm3DFolderName);
+        if (!this.geocpm3DFolder.exists()) {
+            throw new IllegalStateException("Folder "
+                        + geocpm3DFolderName
+                        + " does not exist");
         }
 
-        this.infoFile = new File(resultsFolderFile, INFO_FILE);
-        this.maxFile = new File(resultsFolderFile, MAX_FILE);
+        this.resultsFolder = this.findResultsFolder(new File(this.targetFolder, geocpmFolder));
+
+        this.infoFile = new File(this.resultsFolder, INFO_FILE);
+        this.maxFile = new File(this.resultsFolder, MAX_FILE);
 
         this.checkFile(this.infoFile);
         this.checkFile(this.maxFile);
@@ -327,6 +376,10 @@ public final class GeoCPMAusImport {
      * @return  value, if value represents an Integer, "NULL" otherwise
      */
     private String handleParsedIntegerValue(final String value) {
+        if (value == null) {
+            return NULL;
+        }
+
         final Matcher m = PATTERN_NUMBER.matcher(value);
         if (m.matches()) {
             return value;
@@ -349,6 +402,10 @@ public final class GeoCPMAusImport {
      *          NUMERIC(precision, scale) at all.
      */
     private String handleParsedDecimalValue(final String value, final int precision, final int scale) {
+        if (value == null) {
+            return NULL;
+        }
+
         try {
             final BigDecimal number = new BigDecimal(value);
             if ((number.precision() <= precision) && (number.scale() <= scale)) {
@@ -413,12 +470,66 @@ public final class GeoCPMAusImport {
         final BufferedReader reader = this.readInFile(this.infoFile);
         Matcher m;
         String line;
-        int i = 0;
+        final int i = 0;
         final String[] values = new String[18];
         while ((line = reader.readLine()) != null) {
             m = PATTERN_INFO.matcher(line);
             if (m.matches()) {
-                values[i++] = m.group(1);
+                if (REGEX_INFO_NUM_ELEMENTS.matcher(line).matches()) {
+                    // number of elements
+                    values[0] = m.group(1);
+                } else if (REGEX_INFO_NUM_EDGES.matcher(line).matches()) {
+                    // number of edges
+                    values[1] = m.group(1);
+                } else if (REGEX_INFO_NUM_CALC_STEPS.matcher(line).matches()) {
+                    // number of calc steps
+                    values[2] = m.group(1);
+                } else if (REGEX_INFO_VOL_DRAIN.matcher(line).matches()) {
+                    // volume drain source
+                    values[3] = m.group(1);
+                } else if (REGEX_INFO_VOL_STREET.matcher(line).matches()) {
+                    // volume street
+                    values[4] = m.group(1);
+                } else if (REGEX_INFO_VOL_ELEMENTS.matcher(line).matches()) {
+                    // volume all
+                    values[5] = m.group(1);
+                } else if (REGEX_INFO_VOL_LOSS.matcher(line).matches()) {
+                    // volume loss
+                    values[6] = m.group(1);
+                } else if (REGEX_INFO_VOL_EXC_GEOCPM.matcher(line).matches()) {
+                    // volume exchange dyna -> geocpm
+                    values[7] = m.group(1);
+                } else if (REGEX_INFO_VOL_EXC_DYNA.matcher(line).matches()) {
+                    // volume exchange geocpm -> dyna
+                    values[8] = m.group(1);
+                } else if (REGEX_INFO_SURFACE_GEOCPM.matcher(line).matches()) {
+                    // rain surface elements
+                    values[9] = m.group(1);
+                } else if (REGEX_INFO_TIME_TOTAL.matcher(line).matches()) {
+                    // time total
+                    values[10] = m.group(1);
+                } else if (REGEX_INFO_TIME_CALC_STEP.matcher(line).matches()) {
+                    // time calculation steps
+                    values[11] = m.group(1);
+                } else if (REGEX_INFO_TIME_CONDITIONS.matcher(line).matches()) {
+                    // time boundary conditions
+                    values[12] = m.group(1);
+                } else if (REGEX_INFO_TIME_CONDITIONS_DRAIN.matcher(line).matches()) {
+                    // time boundary conditions source drain
+                    values[13] = m.group(1);
+                } else if (REGEX_INFO_TIME_CONDITIONS_MANHOLE.matcher(line).matches()) {
+                    // time boundary conditions manhole
+                    values[14] = m.group(1);
+                } else if (REGEX_INFO_TIME_CONDITIONS_TRIANGLES.matcher(line).matches()) {
+                    // time boundary conditions triangel
+                    values[15] = m.group(1);
+                } else if (REGEX_INFO_TIME_DGL.matcher(line).matches()) {
+                    // time DGL
+                    values[16] = m.group(1);
+                } else if (REGEX_INFO_TIME_OVERHEAD.matcher(line).matches()) {
+                    // time overhead
+                    values[17] = m.group(1);
+                }
             } else {
                 LOG.warn("Line does not match pattern -> IGNORED: " + line);
             }
@@ -486,6 +597,32 @@ public final class GeoCPMAusImport {
         stmt.executeUpdate(MessageFormat.format(CREATE_VIEW_STMT, this.configId, VIEW_NAME_BASE));
         stmt.close();
         LOG.info("View has been created successfully");
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @throws  Exception  DOCUMENT ME!
+     */
+    private void prepareGeoCPM3Data() throws Exception {
+        // copy results folder to GeoCPM 3D folder
+        FileUtils.copyDirectoryToDirectory(this.resultsFolder, this.geocpm3DFolder);
+
+        // create zip file GeoCPM 3D folder
+        final ZipOutputStream out = new ZipOutputStream(new FileOutputStream(
+                    this.geocpm3DFolder.getAbsolutePath()
+                            + ".zip"));
+
+        FileInputStream fin;
+        for (final File file : FileUtils.listFiles(this.geocpm3DFolder, null, true)) {
+            out.putNextEntry(new ZipEntry(file.getName()));
+            fin = new FileInputStream(file);
+            IOUtils.copy(fin, out);
+            out.closeEntry();
+            IOUtils.closeQuietly(fin);
+        }
+
+        IOUtils.closeQuietly(out);
     }
 
     /**
@@ -654,6 +791,20 @@ public final class GeoCPMAusImport {
                     }
                 });
 
+            // start thread for creating preparing GeoCPM 3D data
+            execService.submit(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        try {
+                            prepareGeoCPM3Data();
+                        } catch (final Exception ex) {
+                            LOG.error("An error occurred while preparing GeoCPM 3D data", ex);
+                            throw new RuntimeException(ex);
+                        }
+                    }
+                });
+
             // start thread for creating view needed by WMS
             execService.submit(new Runnable() {
 
@@ -691,5 +842,15 @@ public final class GeoCPMAusImport {
                 }
             }
         }
+    }
+
+    /**
+     * DOCUMENT ME!
+     *
+     * @param  args  DOCUMENT ME!
+     */
+    public static void main(final String[] args) {
+        System.out.println("     Zeit - Randbedingungen - Source and Drain: 3328088.00".matches(
+                "Zeit.*Randbedingungen\\s+:.*"));
     }
 }

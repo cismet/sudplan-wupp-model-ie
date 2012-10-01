@@ -61,8 +61,6 @@ BEGIN
   delete from geocpm_manhole where geocpm_configuration_id = geocpm_conf_id;
    
   delete from geocpm_source_drain where geocpm_configuration_id = geocpm_conf_id;
-  
-  delete from geocpm_point    where geocpm_configuration_id = geocpm_conf_id;
 
   delete from geocpm_triangle where geocpm_configuration_id = geocpm_conf_id;
 
@@ -70,7 +68,8 @@ BEGIN
   
   delete from geocpm_curve where geocpm_configuration_id = geocpm_conf_id;
 
-
+  delete from geocpm_point where geocpm_configuration_id = geocpm_conf_id;
+  
   delete from geocpm_configuration where id = geocpm_conf_id;
 
 --- GEOM CLEAN UP
