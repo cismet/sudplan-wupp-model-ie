@@ -95,10 +95,13 @@ public class GeoCPMExport {
 
     public static final String META_DATA_FILE_NAME = "geocpm_export_meta.properties";
     public static final String PROP_CONFIG_ID = "configuration_id";
+    public static final String PROP_DELTA_CONFIG_ID = "delta_configuration_id";
     public static final String PROP_GEOCPM_FOLDER = "geocpm_folder";
     public static final String PROP_DYNA_FOLDER = "dyna_folder";
     public static final String GEOCPM_3D_FOLDER = "geocpm3d";
     public static final String PROP_GEOCPM_3D_FOLDER = GEOCPM_3D_FOLDER;
+
+    public static final int NO_DELTA_CONFIG_ID = -1;
 
     // preallocate space for 10 records
     private static final int DYNA_ALL_RECORDS_INIT_SIZE = 1510;
@@ -160,7 +163,7 @@ public class GeoCPMExport {
             final String user,
             final String password,
             final String dbUrl) throws ClassNotFoundException {
-        this(configId, -1, outFolder, user, password, dbUrl);
+        this(configId, NO_DELTA_CONFIG_ID, outFolder, user, password, dbUrl);
     }
     /**
      * todo: delta config handling
@@ -309,6 +312,7 @@ public class GeoCPMExport {
         LOG.info("Start creation of export meta data...");
         final Properties prop = new Properties();
         prop.put(PROP_CONFIG_ID, String.valueOf(this.configId));
+        prop.put(PROP_DELTA_CONFIG_ID, String.valueOf(this.deltaConfigId));
         prop.put(PROP_GEOCPM_3D_FOLDER, GEOCPM_3D_FOLDER);
         prop.put(PROP_GEOCPM_FOLDER, (this.geocpmEinFolder == null) ? "unknown" : this.geocpmEinFolder);
         prop.put(PROP_DYNA_FOLDER, (this.dynaEinFolder == null) ? "unknown" : this.dynaEinFolder);
@@ -355,8 +359,8 @@ public class GeoCPMExport {
             final String qIn = this.handleValue(result.getString("q_in"));
             final String qOut = this.handleValue(result.getString("q_out"));
 
-//            this.geocpmEinFolder = this.handleValue(result.getString("geocpm_ein_folder"));
-//            this.dynaEinFolder = this.handleValue(result.getString("dyna_ein_folder"));
+            this.geocpmEinFolder = this.handleValue(result.getString("geocpm_ein_folder"));
+            this.dynaEinFolder = this.handleValue(result.getString("dyna_ein_folder"));
 
             final char YES = 'y';
             final char NO = 'n';
@@ -444,7 +448,7 @@ public class GeoCPMExport {
                         z = z.add(newHeight);
                     }
                 }
-
+                
                 formattedZ = this.handleValue(DCF3, z);
 
                 tmpContent.append(this.handleValue(index))
@@ -1046,7 +1050,7 @@ public class GeoCPMExport {
      * @throws  RuntimeException  DOCUMENT ME!
      */
     private void prepareDeltaData(final Statement stmt) {
-        if (this.deltaConfigId == -1) {
+        if (this.deltaConfigId == NO_DELTA_CONFIG_ID) {
             return;
         }
 
@@ -1190,20 +1194,20 @@ public class GeoCPMExport {
             stmt = con.createStatement();
 
             final Statement finalStmt = stmt;
-            final Thread deltaDataThread = new Thread(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            prepareDeltaData(finalStmt);
-                        }
-                    });
-            deltaDataThread.start();
+//            final Thread deltaDataThread = new Thread(new Runnable() {
+//
+//                        @Override
+//                        public void run() {
+            prepareDeltaData(finalStmt);
+//                        }
+//                    });
+//            deltaDataThread.start();
 
             this.retrieveConfigData(stmt);
 
             this.retrievePoints(stmt);
 
-            deltaDataThread.join();
+//            deltaDataThread.join();
 
             this.retrieveTriangles(stmt);
             this.retrieveCurves(stmt);

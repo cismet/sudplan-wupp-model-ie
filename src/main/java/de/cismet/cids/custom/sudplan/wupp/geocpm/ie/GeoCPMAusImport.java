@@ -13,7 +13,6 @@ import it.geosolutions.geoserver.rest.encoder.GSResourceEncoder.ProjectionPolicy
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.filefilter.FileFileFilter;
 import org.apache.log4j.Logger;
 
 import java.io.*;
@@ -66,12 +65,15 @@ public final class GeoCPMAusImport {
 
     private static final Pattern PATTERN_NUMBER = Pattern.compile("\\d+\\.?\\d+");
 
-    private static final String CREATE_VIEW_STMT = " CREATE VIEW {1}{0} AS "
+    private static final String CREATE_VIEW_STMT = " CREATE VIEW {1}{0}_{2} AS "
                 + " select t.geom, m.water_level "
                 + " from  geocpm_aus_max m, geocpm_triangle t "
                 + " where m.geocpm_configuration_id = {0} "
                 + " and   t.geocpm_configuration_id = {0} "
-                + " and   m.geocpm_triangle_id      = t.index ";
+                + " and   m.geocpm_triangle_id      = t.index "
+                + " and   (m.delta_configuration_id = {2} {3}) ";
+
+    private static final String VIEW_CONDITION_NO_DELTA = " OR m.delta_configuration_id  is NULL ";
 
     private static final int NUM_THREADS = 2;
 
@@ -143,6 +145,7 @@ public final class GeoCPMAusImport {
     //~ Instance fields --------------------------------------------------------
 
     private int configId;
+    private int deltaConfigId;
     private File infoFile;
     private File maxFile;
     private File resultsFolder;
@@ -203,6 +206,7 @@ public final class GeoCPMAusImport {
         this.targetFolder = targetFolder;
 
         this.configId = -1;
+        this.deltaConfigId = -1;
         this.user = user;
         this.password = password;
         this.dbUrl = dbUrl;
@@ -243,7 +247,8 @@ public final class GeoCPMAusImport {
             throw new IllegalStateException("No layer has been imported yet");
         }
 
-        return VIEW_NAME_BASE + this.configId;
+        return VIEW_NAME_BASE + this.configId + '_' + this.deltaConfigId;
+        
     }
 
     /**
@@ -311,6 +316,7 @@ public final class GeoCPMAusImport {
         prop.load(new FileInputStream(exportMetaDataFile));
 
         this.configId = Integer.parseInt(prop.getProperty(GeoCPMExport.PROP_CONFIG_ID));
+        this.deltaConfigId = Integer.parseInt(prop.getProperty(GeoCPMExport.PROP_DELTA_CONFIG_ID));
 
         final String geocpmFolder = prop.getProperty(GeoCPMExport.PROP_GEOCPM_FOLDER);
 
@@ -539,7 +545,8 @@ public final class GeoCPMAusImport {
         // execute corresponding update statement
         final Statement stmt = con.createStatement();
         stmt.executeUpdate(
-            "INSERT INTO geocpm_aus_info "
+            " INSERT INTO geocpm_aus_info "
+                    + " (geocpm_configuration_id, number_of_elements, number_of_edges, number_of_calc_steps, volume_drain_source, volume_street, volume_all, volume_loss, volume_exchange_dyna_geocpm, volume_exchange_geocpm_dyna, rain_surface_elements, time_total, time_time_step_calc, time_boundary_conditions, time_boundary_conditions_source_drain, time_boundary_conditions_manhole, time_boundary_conditions_triangle, time_dgl, time_overhead,delta_configuration_id) "
                     + "VALUES("
                     + this.configId
                     + ','  // configuration id
@@ -578,7 +585,9 @@ public final class GeoCPMAusImport {
                     + this.handleParsedDecimalValue(values[16], 10, 2)
                     + ','  // Saint-Venant'sche DGL
                     + this.handleParsedDecimalValue(values[17], 10, 2)
-                    + ");" // time overhead
+                    + ','  // time overhead
+                    + this.deltaConfigId
+                    + ");" // delta configuration id
                     );
 
         LOG.info("Import of info file " + this.infoFile + " has been finished successfully");
@@ -594,7 +603,23 @@ public final class GeoCPMAusImport {
     private void createView(final Connection con) throws Exception {
         LOG.info("Start view creation...");
         final Statement stmt = con.createStatement();
-        stmt.executeUpdate(MessageFormat.format(CREATE_VIEW_STMT, this.configId, VIEW_NAME_BASE));
+
+        if (this.deltaConfigId == GeoCPMExport.NO_DELTA_CONFIG_ID) {
+            stmt.executeUpdate(MessageFormat.format(
+                    CREATE_VIEW_STMT,
+                    this.configId,
+                    VIEW_NAME_BASE,
+                    this.deltaConfigId,
+                    VIEW_CONDITION_NO_DELTA));
+        } else {
+            stmt.executeUpdate(MessageFormat.format(
+                    CREATE_VIEW_STMT,
+                    this.configId,
+                    VIEW_NAME_BASE,
+                    this.deltaConfigId,
+                    ""));
+        }
+
         stmt.close();
         LOG.info("View has been created successfully");
     }
@@ -637,7 +662,8 @@ public final class GeoCPMAusImport {
 
         final StringBuilder builder = new StringBuilder(((int)this.maxFile.length()) << 1);
 
-        builder.append("INSERT INTO geocpm_aus_max VALUES ");
+        builder.append("INSERT INTO geocpm_aus_max ")
+                .append("(geocpm_configuration_id, geocpm_triangle_id, water_level, delta_configuration_id) VALUES ");
 
         final BufferedReader reader = this.readInFile(this.maxFile);
         Matcher m;
@@ -657,6 +683,7 @@ public final class GeoCPMAusImport {
                 builder.append('(').append(this.configId)                              // configuration id
                 .append(',').append(m.group(1))                                        // triangle index
                 .append(',').append(this.handleParsedDecimalValue(m.group(2), 20, 10)) // water level
+                .append(',').append(this.deltaConfigId)                                // delta configuration id
                 .append(')');
             } else {
                 LOG.warn("Line does not match pattern -> IGNORED: " + line);
@@ -686,17 +713,19 @@ public final class GeoCPMAusImport {
     private void importToGeoServer(final Connection con) throws Exception {
         LOG.info("Start GeoServer import...");
 
+        final String viewName = VIEW_NAME_BASE + this.configId + '_' + this.deltaConfigId;
+
         final GeoServerRESTPublisher publisher = new GeoServerRESTPublisher(
                 this.restUrl,
                 this.restUser,
                 this.restPassword);
 
         final AttributesAwareGSFeatureTypeEncoder featureType = new AttributesAwareGSFeatureTypeEncoder();
-        featureType.setName(VIEW_NAME_BASE + this.configId);  // view name as feature type name
+        featureType.setName(viewName);  // view name as feature type name
         featureType.setEnabled(true);
         featureType.setSRS("EPSG:31466");
         featureType.setProjectionPolicy(ProjectionPolicy.FORCE_DECLARED);
-        featureType.setTitle(VIEW_NAME_BASE + this.configId); // view name as feature type title
+        featureType.setTitle(viewName); // view name as feature type title
 
         GSAttributeEncoder attribute = new GSAttributeEncoder();
         attribute.addEntry("name", "geom");
@@ -720,7 +749,7 @@ public final class GeoCPMAusImport {
         final ResultSet result = query.executeQuery(BB_QUERY + this.configId);
 
         if (!result.next()) {
-            throw new RuntimeException("view " + VIEW_NAME_BASE + this.configId + " does not deliver any records");
+            throw new RuntimeException("view " + viewName + " does not deliver any records");
         }
 
         featureType.setNativeBoundingBox(result.getDouble("native_xmin"),
@@ -842,15 +871,5 @@ public final class GeoCPMAusImport {
                 }
             }
         }
-    }
-
-    /**
-     * DOCUMENT ME!
-     *
-     * @param  args  DOCUMENT ME!
-     */
-    public static void main(final String[] args) {
-        System.out.println("     Zeit - Randbedingungen - Source and Drain: 3328088.00".matches(
-                "Zeit.*Randbedingungen\\s+:.*"));
     }
 }
