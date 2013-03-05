@@ -18,7 +18,7 @@ package de.cismet.cids.custom.sudplan.wupp.geocpm.ie;
 
 import de.cismet.cids.custom.sudplan.geoserver.AttributesAwareGSFeatureTypeEncoder;
 import de.cismet.cids.custom.sudplan.geoserver.GSAttributeEncoder;
-import de.cismet.remotetesthelper.ws.rest.RemoteTestHelperClient;
+//import de.cismet.remotetesthelper.ws.rest.RemoteTestHelperClient;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -58,7 +58,7 @@ public class GeoCPMAusImportTest
     
     
     private static final String TEST_DB_NAME = "simple_geocpm_test_db";
-    private static final RemoteTestHelperClient SERVICE = new RemoteTestHelperClient();
+//    private static final RemoteTestHelperClient SERVICE = new RemoteTestHelperClient();
     
     
     
