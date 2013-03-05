@@ -348,3 +348,12 @@ CREATE TABLE rainevent (
 
 
 ALTER TABLE public.rainevent OWNER TO postgres;
+
+
+CREATE OR REPLACE VIEW geocpm_breaking_edge_layer AS 
+
+ SELECT be.height, be.type, st_transform(st_setsrid(g.geo_field, 4326), 31466) AS geo_field
+
+   FROM geocpm_breaking_edge be
+
+   LEFT JOIN geom g ON g.id = be.geom;
