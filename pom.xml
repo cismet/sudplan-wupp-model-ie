@@ -16,6 +16,13 @@
 
     <name>Wuppertal Sudplan Model Import Export</name>
     <description>Importer and Exporter for the local models of Wuppertal</description>
+    <licenses>
+        <license>
+            <name>GNU Lesser General Public License</name>
+            <distribution>repo</distribution>
+            <url>http://www.gnu.org/licenses/lgpl-3.0.html</url>
+        </license>
+    </licenses>
 
     <prerequisites>
         <maven>3</maven>
